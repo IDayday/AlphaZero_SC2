@@ -16,9 +16,9 @@ class DQNBMAgent(BaseBMAgent):
         total_minerals = minerals + minerals_mirror
         if obs.last() or obs_mirror.last() or total_minerals >= 20000:
             if self.reward > self.reward_mirror:
-                return 500
+                return 1
             elif self.reward < self.reward_mirror:
-                return -500
+                return -1
             else:
                 return 0
         else:
@@ -53,8 +53,9 @@ class DQNBMAgent(BaseBMAgent):
             # 有效动作集
             choices = [i for i in range(self.n_action) if checkers[i](player, mirror)]
             if self.in_progress == BMAction.NO_OP:
-                action_prob, value= self.model.predict(combine_state)
+                action_prob, value = self.model.predict(combine_state)
                 action_prob_mask = to_tensor([action_prob[0][i] for i in choices], self.device)
+                action_index = choices
                 action_prob = action_prob_mask/torch.sum(action_prob_mask)
         
         else:

@@ -25,8 +25,9 @@ class Trainer:
         env_copy = self.envs_copy[0]
         env_mirror_copy = self.envs_copy[1]
         agent_copy = self.agent_copy
+        
         # env and agent initialize
-        env_reset(env_copy, env_mirror_copy, agent_copy, self.args)
+        obs, obs_mirror, env, env_mirror, agent = env_reset(env_copy, env_mirror_copy, agent_copy, self.args)
         train_examples = []
         current_player = 1  # 我方先手
         
@@ -35,15 +36,15 @@ class Trainer:
             # 在执行动作时，agent内记录对局情况的参数也会相应改变
             # 我方
             if i%2==0:
-                obs = env_copy.step(actions=[act])[0]
+                obs = env.step(actions=[act])[0]
             # 对手
             else:
-                obs_mirror = env_mirror_copy.step(actions=[act])[0]
+                obs_mirror = env_mirror.step(actions=[act])[0]
 
         while True:
             # 依据最大模拟数进行一次从根节点的模拟
             # 用copy的环境进行模拟推演，返回root节点
-            self.mcts = MCTS(env_copy, env_mirror_copy, agent_copy, self.args)
+            self.mcts = MCTS(env, env_mirror, agent, self.args)
             root = self.mcts.run(obs, obs_mirror, current_player)
 
             action_probs = [0 for _ in range(6)]
