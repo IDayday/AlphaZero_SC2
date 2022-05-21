@@ -1,21 +1,19 @@
-# AlphaZeroSimple
+# AlphaZeroSC2
 
-Blog: http://joshvarty.github.io/AlphaZero/
+>The first time, I want to try this by using the pySC2, but it is hard to create a zero-game in mini-game buildmarines. So I have to restructure the whole game by myself, you can see the details in bmgame.py.
 
-Video: https://www.youtube.com/watch?v=62nq4Zsn8vc
-
-The absolute most basic example of AlphaZero and Monte Carlo Tree Search I could come up with. This implementation plays a game called Connect2:
-
-![](http://joshvarty.github.io/AlphaZero/connect2.gif)
-
-In Connect2 players alternate between playing pieces on a tiny 1x4 board with the goal of placing two of their pieces side-by-side. It’s comically easy to win as the first player, but Connect2 still has the interesting property that either player technically has the chance to win, lose or draw.
+>The mini-game buildmarines in order to solve an optimization problem of the production, but it only has one player. If I set another player in the game, and set some limit of the parameters, it can be transferred to a zero-game environment. And I can try to use MCTS to solve this problem.
 
 
-## Dependencies
- - PyTorch
- - kaggle_environments (Optional: Allows you to play against the model)
- 
- 
- ## Based On:
-  - [MuZero General](https://github.com/werner-duvaud/muzero-general/)
-  - [Alpha Zero General](https://github.com/suragnair/alpha-zero-general)
+## 5.21
+🙄🙄🙄
+**Say Goodbye to the pySC2** (PS: it wastes too much of my time, nearly a month)
+😚😚😚
+**Say Hello to my bmgame** (PS: I try my best to restructrue the whole game logic, also about the inner parameters)
+
+Maybe I need to explain why I want to do this. First, I like the SC2 game😋. Second, it's my course work 😥(solve a zero-game by using MCTS).
+
+## TODO
+* reset MCTS in new game environment
+* train set in new game environment
+* maybe the parallel training set
