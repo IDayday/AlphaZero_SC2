@@ -10,6 +10,7 @@ from monte_carlo_tree_search_bm import MCTS
 from copy import deepcopy, copy
 
 from pysc2.lib.actions import FUNCTIONS as F
+from marine_agent import BMAction
 
 class Trainer:
 
@@ -40,23 +41,58 @@ class Trainer:
             # 对手
             else:
                 obs_mirror = env_mirror.step(actions=[act])[0]
-
+        action_step = 0
+        step_action = []
+        action_list = []
         while True:
             # 依据最大模拟数进行一次从根节点的模拟
             # 用copy的环境进行模拟推演，返回root节点
             self.mcts = MCTS(env, env_mirror, agent, self.args)
-            root = self.mcts.run(obs, obs_mirror, current_player)
+            root, search_path = self.mcts.run(obs, obs_mirror, current_player, action_list)
 
             action_probs = [0 for _ in range(6)]
             for k, v in root.children.items():
                 action_probs[k] = v.visit_count
 
             action_probs = action_probs / np.sum(action_probs)
-            train_examples.append((canonical_board, current_player, action_probs))
+            train_examples.append((root.state, current_player, action_probs))
 
             action = root.select_action(temperature=0)
-            state, current_player = self.env.get_next_state(state, current_player, action)
-            reward = self.env.get_reward_for_player(state, current_player)
+            # action to real_action
+            o_env = self.envs[0]
+            o_env_mirror = self.envs[1]
+            # 原始环境执行动作
+            if action_step%2 == 0:
+                mirror = False
+                self.agent.in_progress = BMAction(action)
+                if self.agent.in_progress == BMAction.NO_OP:
+                    action_real, _ = self.agent.choose_act(obs, mirror)
+                    obs = o_env.step(actions=[action_real])[0]
+                    step_action.append(action_real)
+                while self.agent.in_progress != BMAction.NO_OP:
+                    action_real, _ = self.agent.choose_act(obs, mirror)
+                    obs = o_env.step(actions=[action_real])[0]
+                    step_action.append(action_real)
+            else:
+                mirror = True
+                self.agent.in_progress_mirror = BMAction(action)
+                if self.agent.in_progress_mirror == BMAction.NO_OP:
+                    action_real_mirror, _ = self.agent.choose_act(obs_mirror, mirror)
+                    obs_mirror = o_env_mirror.step(actions=[action_real_mirror])[0]
+                    step_action.append(action_real_mirror)
+                while self.agent.in_progress_mirror != BMAction.NO_OP:
+                    action_real_mirror, _ = self.agent.choose_act(obs_mirror, mirror)
+                    obs_mirror = o_env_mirror.step(actions=[action_real_mirror])[0]
+                    step_action.append(action_real_mirror)
+            env, env_mirror = o_env, o_env_mirror
+            action_list.append(step_action)
+            step_action = []
+
+            
+
+
+            state, current_player = env.get_next_state(state, current_player, action)
+            reward = agent.cal_win_value(root.obs_s)
             # 只有模拟到终局才有reward返回，如果一直没有reward，那么会一直模拟下去
             if reward is not None:
                 ret = []

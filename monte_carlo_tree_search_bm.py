@@ -27,6 +27,7 @@ class Node:
         self.value_sum = 0
         self.children = {}
         self.state = None
+        self.agent = None
         self.obs_s = obss              # [obs, obs_mirror]
         self.action_list = []
 
@@ -74,7 +75,7 @@ class Node:
 
         return best_action, best_child
 
-    def expand(self, state, current_player, action_probs):
+    def expand(self, state, current_player, action_probs, agent):
         """
         We expand a node and keep track of the prior policy probability given by neural network
         """
@@ -85,6 +86,8 @@ class Node:
                 # 生成所有可能的子节点，并赋予对应的先验
                 # 对手,需要反转player
                 self.children[a] = Node(prior=prob, current_player=self.current_player * -1)
+                self.children[a].agent = deepcopy(agent)
+                self.children[a].action_list = deepcopy(self.action_list)
 
     def __repr__(self):
         """
@@ -102,26 +105,46 @@ class MCTS:
         self.agent = agent
         self.args = args
 
-    def run(self, obs, obs_mirror, current_player):
+    def run(self, obs, obs_mirror, current_player, o_action_list=None):
 
         env = self.env
         env_mirror = self.env_mirror
         obss = [obs, obs_mirror]
         root = Node(0, current_player, obss=obss)
+        step_action = []
+        root.agent = deepcopy(self.agent)
         # EXPAND root
         # 网络输出先验, 初始 current_player=1
         # action_probs 已合法归一化
         action_probs, _ , combine_state = self.agent.predict(root.obs_s, root.current_player)
         # 传递先验概率给节点，供 MCTS 参考
         # envs , obs_s , agent未更新，传递给 children ; combine_state 传递给 root
-        root.expand(combine_state, current_player, action_probs)
+        root.expand(combine_state, current_player, action_probs, root.agent)
 
         loop = False
         # 在最大模拟推演数限制下进行模拟（不一定模拟到终局）
         for _ in range(self.args.num_simulations):
             if loop:
                 # env and agent initialize
-                obs, obs_mirror, env, env_mirror, agent = env_reset(self.env, self.env_mirror, self.agent, self.args)
+                obs, obs_mirror, env, env_mirror, _agent = env_reset(self.env, self.env_mirror, self.agent, self.args)
+                # 与原始环境同步
+                if o_action_list:
+                    for i, act in enumerate(o_action_list):
+                        # 在执行动作时，agent内记录对局情况的参数也会相应改变
+                        # 我方
+                        if i%2==0:
+                            for iin, a in enumerate(act):
+                                if iin > 0 and 490 not in obs.observation.available_actions:
+                                    pass
+                                else:
+                                    obs = env.step(actions=[a])[0]
+                        # 对手
+                        else:
+                            for iin, a in enumerate(act):
+                                if iin > 0 and 490 not in obs_mirror.observation.available_actions:
+                                    pass
+                                else:
+                                    obs_mirror = env_mirror.step(actions=[a])[0]
 
             node = root
             search_path = [node]
@@ -131,14 +154,22 @@ class MCTS:
                 action, node = node.select_child()
                 search_path.append(node)
             # 选中子节点和对应动作后，同步env到该state，做好执行该动作的准备
-            for i, act in enumerate(node.action_list):
+            for i, act in enumerate(search_path[-2].action_list):
                 # 在执行动作时，agent内记录对局情况的参数也会相应改变
                 # 我方
                 if i%2==0:
-                    obs = env.step(actions=[act])[0]
+                    for iin, a in enumerate(act):
+                        if iin > 0 and 490 not in obs.observation.available_actions:
+                            pass
+                        else:
+                            obs = env.step(actions=[a])[0]
                 # 对手
                 else:
-                    obs_mirror = env_mirror.step(actions=[act])[0]
+                    for iin, a in enumerate(act):
+                        if iin > 0 and 490 not in obs_mirror.observation.available_actions:
+                            pass
+                        else:
+                            obs_mirror = env_mirror.step(actions=[a])[0]
             # 定义当前父节点, 执行最优子节点动作
             parent = search_path[-2]
             child = search_path[-1]
@@ -148,40 +179,43 @@ class MCTS:
             if parent.current_player == 1:
                 mirror = False
                 #TODO: 不一定要把待执行的动作，提交到in_progress中
-                self.agent.in_progress = BMAction(action)
-                if self.agent.in_progress == BMAction.NO_OP:
-                    action_real, _ = self.agent.choose_act(obs, mirror)
+                child.agent.in_progress = BMAction(action)
+                if child.agent.in_progress == BMAction.NO_OP:
+                    action_real, _ = child.agent.choose_act(obs, mirror)
                     obs = env.step(actions=[action_real])[0]
-                    child.action_list.append(action_real)
-                while self.agent.in_progress != BMAction.NO_OP:
-                    action_real, _ = self.agent.choose_act(obs, mirror)
+                    step_action.append(action_real)
+                while child.agent.in_progress != BMAction.NO_OP:
+                    action_real, _ = child.agent.choose_act(obs, mirror)
                     obs = env.step(actions=[action_real])[0]
-                    child.action_list.append(action_real)
+                    step_action.append(action_real)
             elif parent.current_player == -1:
                 mirror = True
-                self.agent.in_progress_mirror = BMAction(action)
-                if self.agent.in_progress_mirror == BMAction.NO_OP:
-                    action_real_mirror, _ = self.agent.choose_act(obs_mirror, mirror)
+                child.agent.in_progress_mirror = BMAction(action)
+                if child.agent.in_progress_mirror == BMAction.NO_OP:
+                    action_real_mirror, _ = child.agent.choose_act(obs_mirror, mirror)
                     obs_mirror = env_mirror.step(actions=[action_real_mirror])[0]
-                    child.action_list.append(action_real_mirror)
-                while self.agent.in_progress_mirror != BMAction.NO_OP:
-                    action_real_mirror, _ = self.agent.choose_act(obs_mirror, mirror)
+                    step_action.append(action_real_mirror)
+                while child.agent.in_progress_mirror != BMAction.NO_OP:
+                    action_real_mirror, _ = child.agent.choose_act(obs_mirror, mirror)
                     obs_mirror = env_mirror.step(actions=[action_real_mirror])[0]
-                    child.action_list.append(action_real_mirror)
+                    step_action.append(action_real_mirror)
             
             # 执行动作后，更新当前的子节点信息
             child.obs_s = [obs, obs_mirror]
+            child.action_list.append(step_action)
             # # 在expand时会将next_state赋予目前的子节点
             # next_state = child.agent.get_combine_state(child.obs_s, child.current_player)
             # 判断对局是否到达终点，计算最终胜负得分
-            value = self.agent.cal_win_value(child.obs_s)
+            value = child.agent.cal_win_value(child.obs_s)
             if value is None:
                 # 从对手的视角看，当前状态转移到达状态的价值（比如这一步你走得好，那么对手眼中，这个状态价值就低）
-                action_probs, value , combine_state= agent.predict(child.obs_s, child.current_player)
-                child.expand(combine_state, child.current_player, action_probs)
+                action_probs, value , combine_state= child.agent.predict(child.obs_s, child.current_player)
+                child.expand(combine_state, child.current_player, action_probs, child.agent)
             self.backpropagate(search_path, value, parent.current_player * -1)
+            loop = True
+            step_action = []
 
-        return root
+        return root, search_path
 
     def backpropagate(self, search_path, value, current_player):
         """

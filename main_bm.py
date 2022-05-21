@@ -28,7 +28,7 @@ parser.add_argument('--clip-grad', type=float, default=1.0, help='clipping thres
 parser.add_argument('--lr', type=float, default=1e-2, help='initial learning rate')
 parser.add_argument('--epochs', type=int, default=200, help='number of training epochs')
 parser.add_argument('--numIters', type=int, default=500, help='Total number of training iterations')
-parser.add_argument('--num_simulations', type=int, default=5000, help='Total number of MCTS simulations to run when deciding on a move to play')
+parser.add_argument('--num_simulations', type=int, default=200, help='Total number of MCTS simulations to run when deciding on a move to play')
 parser.add_argument('--numEps', type=int, default=200, help='Number of full games (episodes) to run during each iteration')
 parser.add_argument('--batch-size', type=int, default=64, help='batch size')
 parser.add_argument('--log-step', type=int, default=100, help='logging print step')
