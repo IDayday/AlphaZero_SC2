@@ -4,7 +4,6 @@
 
 >The mini-game buildmarines in order to solve an optimization problem of the production, but it only has one player. If I set another player in the game, and set some limit of the parameters, it can be transferred to a zero-sum game environment. And I can try to use MCTS to solve this problem.
 
-
 ## 5.21
 
 🙄🙄🙄
