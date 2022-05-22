@@ -105,7 +105,6 @@ class DQNAgent:
             action_prob, value = self.act_net(state.unsqueeze(0))
             return action_prob, value
 
-
     def save(self, path):
         torch.save({
             'model_state': self.act_net.state_dict(),

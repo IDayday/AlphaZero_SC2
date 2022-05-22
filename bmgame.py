@@ -1,5 +1,8 @@
+from random import random
+from matplotlib.style import available
 import numpy as np
 from enum import Enum
+import random
 
 class BMAction(Enum):
     NO_OP = 0
@@ -27,9 +30,10 @@ class BMGame:
         self.barracks_time = 60
 
         # limit
-        self.total_mainerals = 10000
+        self.total_mainerals = 15000
         self.total_depots = 20
         self.total_barracks = 20
+        self.total_steps = 500
 
         # actions
         self.actions = 5
@@ -37,6 +41,11 @@ class BMGame:
         # reward
         self.reward = 0
         self.reward_op = 0
+
+        # steps
+        self.current_steps = 0
+        self.current_steps_op = 0
+        
     
     def reset(self,): 
         # production queue, sure to be sleek
@@ -70,7 +79,7 @@ class BMGame:
             self.mainerals_rate = 1.25
         else:
             self.mainerals_rate = 1.2
-        self.mainerals = [50, self.mainerals_rate]
+        self.mainerals = [50, self.mainerals_rate, self.total_values]
 
 
         # op production queue, sure to be sleek
@@ -104,15 +113,29 @@ class BMGame:
             self.mainerals_rate_op = 1.25
         else:
             self.mainerals_rate_op = 1.2
-        self.mainerals_op = [50, self.mainerals_rate_op]
+        self.mainerals_op = [50, self.mainerals_rate_op, self.total_values_op]
 
         # reward
         self.rewrads = [self.reward, self.reward_op]
 
+        # steps
+        self.steps = [self.current_steps, self.current_steps_op]
+
         obs = [self.mainerals, self.population, self.building, self.production_queue, \
                 self.mainerals_op, self.population_op, self.building_op, self.production_queue_op,\
-                self.rewrads]
+                self.rewrads, self.steps]
         return obs
+    
+    def check_gameover(self,obs):
+        mainerals = obs[0]
+        current_steps = obs[9][0]
+
+        mainerals_op = obs[4]
+        current_steps_op = obs[9][1]
+
+        total_value = mainerals[2] + mainerals_op[2]
+        total_steps = current_steps + current_steps_op
+        return(total_value>=self.total_mainerals or total_steps>=self.total_steps)
 
     def check_make_scv(self, obs, player):
         mainerals = obs[0]
@@ -188,7 +211,6 @@ class BMGame:
                     and population_op[1] < population_op[0]
                     and building_op[1] > 0) # at least one barracks is built
     
-
     def check(self, obs, player):
         checkers = [
                     (lambda x,y: True),
@@ -209,6 +231,7 @@ class BMGame:
         return mainerals_rate
 
     def no_op(self, obs, player):
+
         mainerals = obs[0]
         population = obs[1]
         building = obs[2]
@@ -220,9 +243,12 @@ class BMGame:
         production_queue_op = obs[7]
 
         rewards = obs[8]
+        steps = obs[9]
 
         if player == 1:
+            steps[0] += 1
             mainerals[0] += round(population[2]*mainerals[1],0)
+            mainerals[2] += round(population[2]*mainerals[1],0)
             new_queue = []
             for cls,p in enumerate(production_queue):
                 p = [x-1 for x in p]
@@ -249,7 +275,9 @@ class BMGame:
                 new_queue.append(p)
             production_queue = new_queue
         elif player == -1:
+            steps[1] += 1
             mainerals_op[0] += round(population_op[2]*mainerals_op[1],0)
+            mainerals_op[2] += round(population_op[2]*mainerals_op[1],0)
             new_queue = []
             for cls,p in enumerate(production_queue_op):
                 p = [x-1 for x in p]
@@ -278,7 +306,7 @@ class BMGame:
                 new_queue.append(p)
             production_queue_op = new_queue
         obs = [mainerals, population, building, production_queue, mainerals_op, \
-                population_op, building_op, production_queue_op, rewards]
+                population_op, building_op, production_queue_op, rewards, steps]
         return obs
 
     def make_scv(self, obs, player):
@@ -296,6 +324,7 @@ class BMGame:
         production_queue_op = obs[7]
 
         rewards = obs[8]
+        steps = obs[9]
 
         if player == 1:
             mainerals[0] -= self.scv_cost
@@ -306,7 +335,7 @@ class BMGame:
             production_queue_op[0].append(self.scv_time)
             population_op[1] += 1
         obs = [mainerals, population, building, production_queue, mainerals_op, \
-                population_op, building_op, production_queue_op, rewards]
+                population_op, building_op, production_queue_op, rewards, steps]
         return obs
 
     def make_marine(self, obs, player):
@@ -324,6 +353,7 @@ class BMGame:
         production_queue_op = obs[7]
 
         rewards = obs[8]
+        steps = obs[9]
 
         if player == 1:
             mainerals[0] -= self.marine_cost
@@ -334,7 +364,7 @@ class BMGame:
             production_queue_op[1].append(self.marine_time)
             population_op[1] += 1
         obs = [mainerals, population, building, production_queue, mainerals_op, \
-                population_op, building_op, production_queue_op, rewards]
+                population_op, building_op, production_queue_op, rewards, steps]
         return obs
 
     def build_depot(self, obs, player):
@@ -352,6 +382,7 @@ class BMGame:
         production_queue_op = obs[7]
 
         rewards = obs[8]
+        steps = obs[9]
 
         if player == 1:
             mainerals[0] -= self.depot_cost
@@ -360,7 +391,7 @@ class BMGame:
             mainerals_op[0] -= self.depot_cost
             production_queue_op[2].append(self.depot_time)
         obs = [mainerals, population, building, production_queue, mainerals_op, \
-                population_op, building_op, production_queue_op, rewards]
+                population_op, building_op, production_queue_op, rewards, steps]
         return obs
 
     def build_barracks(self, obs, player):
@@ -378,6 +409,7 @@ class BMGame:
         production_queue_op = obs[7]
 
         rewards = obs[8]
+        steps = obs[9]
 
         if player == 1:
             mainerals[0] -= self.barracks_cost
@@ -387,7 +419,7 @@ class BMGame:
             production_queue_op[3].append(self.barracks_time)
 
         obs = [mainerals, population, building, production_queue, mainerals_op, \
-                population_op, building_op, production_queue_op, rewards]
+                population_op, building_op, production_queue_op, rewards, steps]
         return obs
 
     def step(self, obs, action, player):
@@ -398,38 +430,54 @@ class BMGame:
         BUILD_BARRACKS = 3
         MAKE_MARINE = 4
         """
-
-        available_action = self.check(obs, player)
-        print(f"available action {available_action}")
-
-        if action in available_action:
-            # update mainerals
-            # update population
-            # update building
-            # update production queue
-            # update mainerals rate
-            if action == 0:
-                obs = self.no_op(obs, player)
-            elif action == 1:
-                obs = self.make_scv(obs, player)
-            elif action == 2:
-                obs = self.build_depot(obs, player)
-            elif action == 3:
-                obs = self.build_barracks(obs, player)
-            elif action == 4:
-                obs = self.make_marine(obs, player)
-            return obs
+        gameover = self.check_gameover(obs)
+        if gameover:
+            print("The game is over")
+            return obs, gameover
         else:
-            print(f"There is an unavailable action -{action}- for obs now")
+            available_action = self.check(obs, player)
+            print(f"available action {available_action}")
 
+            if action in available_action:
+                # update mainerals
+                # update population
+                # update building
+                # update production queue
+                # update mainerals rate
+                if action == 0:
+                    obs = self.no_op(obs, player)
+                elif action == 1:
+                    obs = self.make_scv(obs, player)
+                elif action == 2:
+                    obs = self.build_depot(obs, player)
+                elif action == 3:
+                    obs = self.build_barracks(obs, player)
+                elif action == 4:
+                    obs = self.make_marine(obs, player)
+                return obs, gameover
+            else:
+                print(f"There is an unavailable action -{action}- for obs now")
 
-if __name__ == '__main__':
-    game = BMGame()
-    obs = game.reset()
-    action = [1,0,0,0,0,0,0,2,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,1,0,0,0,0,3,\
-                1,1,2,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,2,0,0,0,0,0,1,0,1,0,1,0,1,3,1,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,\
-                0,0,0,0,0,0,0,0,0,0,0,0,0,4]
-    player = 1
-    for a in action:
-        obs = game.step(obs, a, player)
-    print(obs)
+    def get_value(self, obs, player):
+        reward =  obs[8][0] - obs[8][1]
+        if reward == 0:
+            return 0
+        else:
+            if player == 1:
+                value = 1 if reward > 0 else -1
+            if player == -1:
+                value = 1 if reward < 0 else -1
+            return value
+
+# if __name__ == '__main__':
+#     game = BMGame()
+#     obs = game.reset()
+#     player = 1
+#     for i in range(6000):
+#         available_action = game.check(obs,player)
+#         aciton = random.choice(available_action)
+#         obs, gameover = game.step(obs, aciton, player)
+#         if gameover:
+#             break
+#         player *= -1
+#     print(obs)

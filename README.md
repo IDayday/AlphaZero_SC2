@@ -16,6 +16,13 @@
 
 Maybe I need to explain why I want to do this. First, I like the SC2 game😋. Second, it's my course work 😥(solve a zero-sum game by using MCTS).
 
+## 5.22
+
+It's easy for me to restart at any obs/node as I want. I set the env(bmgame) to be out of the agent unlike it was before. The obs which the env return combines everything about the current state of the env. So you can easily copy obs if you want to store it in the child node.
+
+* The dqn_model and dqn_agent are completed!
+* The MCTS is over a half.
+
 ## TODO
 * reset MCTS in new game environment
 * train set in new game environment

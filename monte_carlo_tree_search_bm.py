@@ -1,9 +1,8 @@
 import torch
 import math
 import numpy as np
-from marine_agent import BMAction
-from copy import deepcopy, copy
-from wrappers import env_reset
+from copy import deepcopy
+from wrappers import obs2tensor
 
 def ucb_score(parent, child):
     """
@@ -12,7 +11,7 @@ def ucb_score(parent, child):
     prior_score = child.prior * math.sqrt(parent.visit_count) / (child.visit_count + 1)
     if child.visit_count > 0:
         # The value of the child is from the perspective of the opposing player
-        value_score = -child.value()
+        value_score = child.value()
     else:
         value_score = 0
 
@@ -20,16 +19,14 @@ def ucb_score(parent, child):
 
 
 class Node:
-    def __init__(self, prior, current_player, obss=None):
+    def __init__(self, prior, current_player, obs=None):
         self.visit_count = 0
         self.current_player = current_player
         self.prior = prior
         self.value_sum = 0
         self.children = {}
+        self.obs = obs
         self.state = None
-        self.agent = None
-        self.obs_s = obss              # [obs, obs_mirror]
-        self.action_list = []
 
     def expanded(self):
         return len(self.children) > 0
@@ -65,7 +62,7 @@ class Node:
         best_action = -1
         best_child = None
 
-        # 对每一个能到达的子节点，用 UCB 进行评估，返回当前具有最大UCB值的子节点及对应动作
+        # evaluate each children node by UCB , return the best
         for action, child in self.children.items():
             score = ucb_score(self, child)
             if score > best_score:
@@ -75,19 +72,13 @@ class Node:
 
         return best_action, best_child
 
-    def expand(self, state, current_player, action_probs, agent):
+    def expand(self, current_player, action_probs):
         """
         We expand a node and keep track of the prior policy probability given by neural network
         """
-        self.current_player = current_player
-        self.state = state
         for a, prob in enumerate(action_probs):
             if prob != 0:
-                # 生成所有可能的子节点，并赋予对应的先验
-                # 对手,需要反转player
-                self.children[a] = Node(prior=prob, current_player=self.current_player * -1)
-                self.children[a].agent = deepcopy(agent)
-                self.children[a].action_list = deepcopy(self.action_list)
+                self.children[a] = Node(prior=prob, current_player=current_player * -1)
 
     def __repr__(self):
         """
@@ -99,128 +90,51 @@ class Node:
 
 class MCTS:
 
-    def __init__(self, env, env_mirror, agent, args):
+    def __init__(self, env, obs, agent, args, device):
         self.env = env
-        self.env_mirror = env_mirror
+        self.obs = obs
         self.agent = agent
         self.args = args
+        self.device = device
 
-    def run(self, obs, obs_mirror, current_player, o_action_list=None):
+    def run(self, current_player):
 
-        env = self.env
-        env_mirror = self.env_mirror
-        obss = [obs, obs_mirror]
-        root = Node(0, current_player, obss=obss)
-        step_action = []
-        root.agent = deepcopy(self.agent)
+        root = Node(0, current_player, obs=self.obs) # set the beginning root by obs
         # EXPAND root
-        # 网络输出先验, 初始 current_player=1
-        # action_probs 已合法归一化
-        action_probs, _ , combine_state = self.agent.predict(root.obs_s, root.current_player)
-        # 传递先验概率给节点，供 MCTS 参考
-        # envs , obs_s , agent未更新，传递给 children ; combine_state 传递给 root
-        root.expand(combine_state, current_player, action_probs, root.agent)
+        # predict the normalized action_probs
+        action_probs, _ , combine_state = self.agent.predict(root.obs, root.current_player)
+        root.state = combine_state
+        root.expand(current_player, action_probs)
 
-        loop = False
-        # 在最大模拟推演数限制下进行模拟（不一定模拟到终局）
+        # simulate under the maxsteps
         for _ in range(self.args.num_simulations):
-            if loop:
-                # env and agent initialize
-                obs, obs_mirror, env, env_mirror, _agent = env_reset(self.env, self.env_mirror, self.agent, self.args)
-                # 与原始环境同步
-                if o_action_list:
-                    for i, act in enumerate(o_action_list):
-                        # 在执行动作时，agent内记录对局情况的参数也会相应改变
-                        # 我方
-                        if i%2==0:
-                            for iin, a in enumerate(act):
-                                if iin > 0 and 490 not in obs.observation.available_actions:
-                                    pass
-                                else:
-                                    obs = env.step(actions=[a])[0]
-                        # 对手
-                        else:
-                            for iin, a in enumerate(act):
-                                if iin > 0 and 490 not in obs_mirror.observation.available_actions:
-                                    pass
-                                else:
-                                    obs_mirror = env_mirror.step(actions=[a])[0]
-
             node = root
             search_path = [node]
             # SELECT
-            # 只要还有未记录的可扩展子节点，持续执行
             while node.expanded():
                 action, node = node.select_child()
                 search_path.append(node)
-            # 选中子节点和对应动作后，同步env到该state，做好执行该动作的准备
-            for i, act in enumerate(search_path[-2].action_list):
-                # 在执行动作时，agent内记录对局情况的参数也会相应改变
-                # 我方
-                if i%2==0:
-                    for iin, a in enumerate(act):
-                        if iin > 0 and 490 not in obs.observation.available_actions:
-                            pass
-                        else:
-                            obs = env.step(actions=[a])[0]
-                # 对手
-                else:
-                    for iin, a in enumerate(act):
-                        if iin > 0 and 490 not in obs_mirror.observation.available_actions:
-                            pass
-                        else:
-                            obs_mirror = env_mirror.step(actions=[a])[0]
-            # 定义当前父节点, 执行最优子节点动作
+            # setting the parent node and child node
             parent = search_path[-2]
             child = search_path[-1]
         
-            # 替当前父节点执行动作，符号 action 转为真实环境 action_real
-            # 将获得的新状态记录下来，给予对应子节点
-            if parent.current_player == 1:
-                mirror = False
-                #TODO: 不一定要把待执行的动作，提交到in_progress中
-                child.agent.in_progress = BMAction(action)
-                if child.agent.in_progress == BMAction.NO_OP:
-                    action_real, _ = child.agent.choose_act(obs, mirror)
-                    obs = env.step(actions=[action_real])[0]
-                    step_action.append(action_real)
-                while child.agent.in_progress != BMAction.NO_OP:
-                    action_real, _ = child.agent.choose_act(obs, mirror)
-                    obs = env.step(actions=[action_real])[0]
-                    step_action.append(action_real)
-            elif parent.current_player == -1:
-                mirror = True
-                child.agent.in_progress_mirror = BMAction(action)
-                if child.agent.in_progress_mirror == BMAction.NO_OP:
-                    action_real_mirror, _ = child.agent.choose_act(obs_mirror, mirror)
-                    obs_mirror = env_mirror.step(actions=[action_real_mirror])[0]
-                    step_action.append(action_real_mirror)
-                while child.agent.in_progress_mirror != BMAction.NO_OP:
-                    action_real_mirror, _ = child.agent.choose_act(obs_mirror, mirror)
-                    obs_mirror = env_mirror.step(actions=[action_real_mirror])[0]
-                    step_action.append(action_real_mirror)
-            
-            # 执行动作后，更新当前的子节点信息
-            child.obs_s = [obs, obs_mirror]
-            child.action_list.append(step_action)
-            # # 在expand时会将next_state赋予目前的子节点
-            # next_state = child.agent.get_combine_state(child.obs_s, child.current_player)
-            # 判断对局是否到达终点，计算最终胜负得分
-            value = child.agent.cal_win_value(child.obs_s)
-            if value is None:
-                # 从对手的视角看，当前状态转移到达状态的价值（比如这一步你走得好，那么对手眼中，这个状态价值就低）
-                action_probs, value , combine_state= child.agent.predict(child.obs_s, child.current_player)
-                child.expand(combine_state, child.current_player, action_probs, child.agent)
+            # get the new obs/state and put it in the child node
+            obs = self.env.step(parent.obs, action, parent.current_player)
+            child.obs = obs
+            # check if the game is over
+            gameover = self.evn.check_gameover(obs)
+            value = self.env.get_value(obs, parent.current_player) if gameover else None
+            if value == None:
+                action_probs, value , combine_state = self.agent.predict(child.obs, child.current_player)
+                child.state = combine_state
+                child.expand(child.current_player, action_probs)
             self.backpropagate(search_path, value, parent.current_player * -1)
-            loop = True
-            step_action = []
 
         return root, search_path
 
     def backpropagate(self, search_path, value, current_player):
         """
-        At the end of a simulation, we propagate the evaluation all the way up the tree
-        to the root.
+        At the end of a simulation, we propagate the evaluation all the way up the tree to the root.
         """
         for node in reversed(search_path):
             node.value_sum += value if node.current_player == current_player else -value

@@ -3,15 +3,12 @@ import sys
 import argparse
 
 from trainer_bm import Trainer
-from wrappers import make_env
 
-from absl import flags
-
+from bmgame import BMGame
 from dqn_agent import DQNBMAgent
 from dqn_model import DQNAgent
-
-FLAGS = flags.FLAGS
-FLAGS(sys.argv[:1])
+import os
+os.environ['CUDA_VISIBLE_DEVICES'] = '6'
 
 parser = argparse.ArgumentParser(description='DQN_MCTS for SC2 BuildMarines',
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -42,55 +39,22 @@ parser.add_argument('--test-epoch', type=int, default=3, help='number of test ep
 args = parser.parse_args()
 
 
-# args = {
-#     'batch_size': 64,
-#     'numIters': 500,                                # Total number of training iterations
-#     'num_simulations': 1,                         # Total number of MCTS simulations to run when deciding on a move to play
-#     'numEps': 16,                                  # Number of full games (episodes) to run during each iteration
-#     'numItersForTrainExamplesHistory': 20,
-#     'epochs': 2,                                    # Number of epochs of training per iteration
-#     'checkpoint_path': 'latest.pth'                 # location to save latest set of weights
-# }
-
-# game = Connect2Game()
-# board_size = game.get_board_size()
-# action_size = game.get_action_size()
-
-# model = Connect2Model(board_size, action_size, device)
-
-# trainer = Trainer(game, model, args)
-# trainer.learn()
-
-
-
 if __name__ == '__main__':
-    # 生成4个env,copy用于simulation
-    env = make_env(args)
-    env_mirror = make_env(args)
-    env_copy = make_env(args)
-    env_mirror_copy = make_env(args)
-    env_lsit = [[env, env_mirror], [env_copy, env_mirror_copy]]
+    env = BMGame
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f'Running on {device.type}')
 
-    n_state = 18  # 2*BMState
-    n_action = 6  # BMAction
+    n_state = 18
+    n_action = 5
+    # algorithm DQN
     model = DQNAgent(n_state, args.hidden_size, n_action, device, lr=args.lr, batch_size=args.batch_size,
                     memory_size=args.memory_size, gamma=args.gamma, clip_grad=args.clip_grad)
     # 生成2个agent,copy用于simulation
     agent = DQNBMAgent(model, device)
-    agent_copy = DQNBMAgent(model, device)
-    agent_list = [agent, agent_copy]
 
-    observation_spec = env.observation_spec()[0]
-    action_spec = env.action_spec()[0]
-    agent.setup(observation_spec, action_spec)
-
-    trainer = Trainer(env_lsit, agent_list, args, device)
+    trainer = Trainer(env, agent, args, device)
     if args.mode == 'train':
         trainer.learn()
     else:
         trainer.evaluate(args.test_epoch)
-    env.close()
-    env_mirror.close()

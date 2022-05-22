@@ -18,6 +18,10 @@ import numpy as np
 # print(b)
 
 a = [1,2,3,1,10]
-p = [x-1 for x in a]
-p.pop(0)
-print(p)
+b = []
+c = [[1,2,3],[4,2,6]]
+a.extend(b)
+a.extend(c)
+# p = [x-1 for x in a]
+# p.pop(0)
+print(a)
