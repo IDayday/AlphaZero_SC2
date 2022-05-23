@@ -4,7 +4,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.utils import clip_grad_norm_
-
+from collections import deque
+from wrappers import to_tensor
 
 class DQN(nn.Module):
     def __init__(self, input_size, hidden_size, output_size, dropout_p=0.1):
@@ -34,7 +35,7 @@ class Memory:
 
     def push(self, item):
         if len(self.memory) < self.capacity:
-            self.memory.append(item)
+            self.memory.extend(item)
         else:
             self.memory[self.pos] = item
             self.pos = (self.pos + 1) % self.capacity
@@ -69,7 +70,7 @@ class DQNAgent:
         self.act_net = DQN(n_observe, hidden_size, n_action).to(device)
         self.criterion = nn.SmoothL1Loss()
         self.optimizer = torch.optim.Adam(self.act_net.parameters(), lr=lr)
-        self.cache = Memory(memory_size)
+        self.cache = deque(maxlen=self.memory_size) # or Memory(maxlen=self.memory_size)
         self.steps_done = 0
 
         self.act_net.apply(self.initialize_weights)
@@ -89,9 +90,24 @@ class DQNAgent:
         if len(self.cache) < self.batch_size:
             return
 
-        state, action, reward, next_state = self.cache.sample(self.batch_size)
-        pred_values = self.act_net(state).gather(1, action.unsqueeze(1)).squeeze(-1)
-        tgt_values = self.tgt_net(next_state).max(1)[0].detach() * self.gamma + reward
+        minibatch = random.sample(self.cache, self.batch_size)
+        # TODO: the memory used maybe optimized better, it should to redesign the data stream and data store
+        state = torch.zeros((self.batch_size,self.n_observe)).to(self.device)
+        action = torch.zeros((self.batch_size,1),dtype=torch.long).to(self.device)
+        action_prob = torch.zeros((self.batch_size,self.n_action)).to(self.device)
+        reward = torch.zeros((self.batch_size,1)).to(self.device)
+        next_state = torch.zeros((self.batch_size,self.n_observe)).to(self.device)
+        for i in range(len(minibatch)):
+            state_, action_, action_prob_, reward_, next_state_ = minibatch[i]
+            state[i] = state_
+            action[i] = action_
+            action_prob[i] = to_tensor(action_prob_,self.device)
+            reward[i] = reward_
+            next_state[i] = next_state_
+        prob, _ = self.act_net(state)
+        prob_, _ = self.tgt_net(next_state)
+        pred_values = prob.gather(1, action).squeeze(-1)
+        tgt_values = prob_.max(1)[0].detach() * self.gamma + reward.squeeze(-1)
 
         self.optimizer.zero_grad()
         loss = self.criterion(pred_values, tgt_values)
@@ -105,10 +121,11 @@ class DQNAgent:
             action_prob, value = self.act_net(state.unsqueeze(0))
             return action_prob, value
 
-    def save(self, path):
+    def save(self, path, i):
+        model_path = path + "model_" + str(i) + ".pt"
         torch.save({
             'model_state': self.act_net.state_dict(),
-        }, path)
+        }, model_path)
 
     def load(self, path):
         model = torch.load(path)

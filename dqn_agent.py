@@ -6,7 +6,7 @@ class DQNBMAgent():
     def __init__(self, model, device):
         self.model = model
         self.device =device
-        self.game = BMGame
+        self.game = BMGame()
     
     def predict(self, obs, current_player):
 
@@ -17,7 +17,7 @@ class DQNBMAgent():
         action_prob_mask = to_tensor([action_prob[0][i] for i in available_actions], 'cpu') # store in cpu device
 
         action_prob = action_prob_mask/torch.sum(action_prob_mask)
-        return action_prob, value, combine_state
+        return action_prob, value.item(), combine_state, available_actions
 
 
 

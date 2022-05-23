@@ -1,3 +1,4 @@
+from copy import deepcopy
 from random import random
 from matplotlib.style import available
 import numpy as np
@@ -430,13 +431,14 @@ class BMGame:
         BUILD_BARRACKS = 3
         MAKE_MARINE = 4
         """
-        gameover = self.check_gameover(obs)
+        copy_obs = deepcopy(obs)
+        gameover = self.check_gameover(copy_obs)
         if gameover:
             print("The game is over")
-            return obs, gameover
+            return copy_obs, gameover
         else:
-            available_action = self.check(obs, player)
-            print(f"available action {available_action}")
+            available_action = self.check(copy_obs, player)
+            # print(f"available action {available_action}")
 
             if action in available_action:
                 # update mainerals
@@ -445,15 +447,15 @@ class BMGame:
                 # update production queue
                 # update mainerals rate
                 if action == 0:
-                    obs = self.no_op(obs, player)
+                    obs = self.no_op(copy_obs, player)
                 elif action == 1:
-                    obs = self.make_scv(obs, player)
+                    obs = self.make_scv(copy_obs, player)
                 elif action == 2:
-                    obs = self.build_depot(obs, player)
+                    obs = self.build_depot(copy_obs, player)
                 elif action == 3:
-                    obs = self.build_barracks(obs, player)
+                    obs = self.build_barracks(copy_obs, player)
                 elif action == 4:
-                    obs = self.make_marine(obs, player)
+                    obs = self.make_marine(copy_obs, player)
                 return obs, gameover
             else:
                 print(f"There is an unavailable action -{action}- for obs now")

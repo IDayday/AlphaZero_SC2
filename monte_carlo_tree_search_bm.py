@@ -11,7 +11,7 @@ def ucb_score(parent, child):
     prior_score = child.prior * math.sqrt(parent.visit_count) / (child.visit_count + 1)
     if child.visit_count > 0:
         # The value of the child is from the perspective of the opposing player
-        value_score = child.value()
+        value_score = -child.value()
     else:
         value_score = 0
 
@@ -72,13 +72,14 @@ class Node:
 
         return best_action, best_child
 
-    def expand(self, current_player, action_probs):
+    def expand(self, current_player, action_probs, available_actions):
         """
         We expand a node and keep track of the prior policy probability given by neural network
         """
+        # a is the index, but available_actions[a] is the true action
         for a, prob in enumerate(action_probs):
             if prob != 0:
-                self.children[a] = Node(prior=prob, current_player=current_player * -1)
+                self.children[available_actions[a]] = Node(prior=prob, current_player=current_player * -1)
 
     def __repr__(self):
         """
@@ -102,9 +103,9 @@ class MCTS:
         root = Node(0, current_player, obs=self.obs) # set the beginning root by obs
         # EXPAND root
         # predict the normalized action_probs
-        action_probs, _ , combine_state = self.agent.predict(root.obs, root.current_player)
+        action_probs, _ , combine_state, available_actions = self.agent.predict(root.obs, root.current_player)
         root.state = combine_state
-        root.expand(current_player, action_probs)
+        root.expand(current_player, action_probs, available_actions)
 
         # simulate under the maxsteps
         for _ in range(self.args.num_simulations):
@@ -119,18 +120,20 @@ class MCTS:
             child = search_path[-1]
         
             # get the new obs/state and put it in the child node
-            obs = self.env.step(parent.obs, action, parent.current_player)
-            child.obs = obs
+            obs, _ = self.env.step(parent.obs, action, parent.current_player)
+            child.obs = deepcopy(obs)
             # check if the game is over
-            gameover = self.evn.check_gameover(obs)
+            gameover = self.env.check_gameover(obs)
+            # the value is from the parent's perspective, but it store in the child node
+            # so, if we check the value in a node, remember that it reflects your opponent's view
             value = self.env.get_value(obs, parent.current_player) if gameover else None
             if value == None:
-                action_probs, value , combine_state = self.agent.predict(child.obs, child.current_player)
+                action_probs, value, combine_state, available_actions = self.agent.predict(child.obs, child.current_player)
                 child.state = combine_state
-                child.expand(child.current_player, action_probs)
+                child.expand(child.current_player, action_probs, available_actions)
             self.backpropagate(search_path, value, parent.current_player * -1)
 
-        return root, search_path
+        return root
 
     def backpropagate(self, search_path, value, current_player):
         """
