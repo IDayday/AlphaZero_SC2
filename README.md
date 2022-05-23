@@ -32,6 +32,7 @@ I test some epoch, the simulation results most likely the draw. The agent doesn'
 
 * For the setting default, simulation of a whole game cost about 3mins.
 
+Maybe, parallel training set is difficult for me now. I will try if I have a time. I need to finish the report first.
 ## TODO
 * ~~reset MCTS in new game environment~~
 * ~~train set in new game environment~~
