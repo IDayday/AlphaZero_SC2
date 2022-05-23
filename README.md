@@ -23,6 +23,14 @@ It's easy for me to restart at any obs/node as I want. I set the env(bmgame) to 
 * The dqn_model and dqn_agent are completed!
 * The MCTS is over a half.
 
+## 5.23
+
+😘😘😘
+I have finished the obvious bugs, and now, training can be started.
+I test some epoch, the simulation results most likely the draw. The agent doesn't know how to build marines in current policy. 
+
+* For the setting default, simulation of a whole game cost about 3mins.
+
 ## TODO
 * reset MCTS in new game environment
 * train set in new game environment
