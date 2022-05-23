@@ -33,6 +33,31 @@ I test some epoch, the simulation results most likely the draw. The agent doesn'
 * For the setting default, simulation of a whole game cost about 3mins.
 
 Maybe, parallel training set is difficult for me now. I will try if I have a time. I need to finish the report first.
+
+The training log just like below, the **simulation result[-2]** means the reward. So "[0,0]" means draw. The total steps of the game are 500. Every search in the one step of simulation about 200 times. The time cost of a whole game can be seen in line **simulation i cost xxx second**.
+
+~~~bash
+simulation start : 2/500
+simulation result :  [[2650.0, 1.25, 4350.0], [135, 12, 12, 0], [10, 1], [[], [], [], []], [2800.0, 1.25, 4350.0], [135, 12, 12, 0], [10, 0], [[], [], [], []], [0, 0], [250, 250]]
+simulation 2 cost 116.15 second
+simulation is over!
+start training!
+epoch 0 batchloss:  0.013598231598734856
+epoch 1 batchloss:  0.0140206478536129
+epoch 2 batchloss:  0.015985790640115738
+epoch 3 batchloss:  0.01822245679795742
+epoch 4 batchloss:  0.011359521187841892
+simulation start : 3/500
+simulation result :  [[4182.0, 1.2, 5982.0], [123, 19, 19, 0], [9, 0], [[], [], [], []], [3572.0, 1.25, 5422.0], [147, 20, 16, 0], [11, 0], [[], [], [], []], [0, 0], [250, 250]]
+simulation 3 cost 107.9 second
+simulation is over!
+start training!
+epoch 0 batchloss:  0.008436528965830803
+epoch 1 batchloss:  0.007282668724656105
+epoch 2 batchloss:  0.007358501199632883
+epoch 3 batchloss:  0.007472369819879532
+epoch 4 batchloss:  0.006356597878038883
+~~~
 ## TODO
 * ~~reset MCTS in new game environment~~
 * ~~train set in new game environment~~
