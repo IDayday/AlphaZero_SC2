@@ -26,6 +26,7 @@ It's easy for me to restart at any obs/node as I want. I set the env(bmgame) to 
 ## 5.23
 
 😘😘😘
+
 I have finished the obvious bugs, and now, training can be started.
 I test some epoch, the simulation results most likely the draw. The agent doesn't know how to build marines in current policy. 
 
