@@ -72,7 +72,8 @@ There is a trouble in the training now! The agent seems to fall into local optim
     * mineral rate function
 * VS random opponent agent
 * Add noise to the action prob from the model predict result
-* Add intrinsic reward
+* Add intrinsic reward                                          
+    
 ## TODO
 * ~~reset MCTS in new game environment~~
 * ~~train set in new game environment~~
