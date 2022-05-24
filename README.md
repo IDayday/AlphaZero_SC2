@@ -58,6 +58,21 @@ epoch 2 batchloss:  0.007358501199632883
 epoch 3 batchloss:  0.007472369819879532
 epoch 4 batchloss:  0.006356597878038883
 ~~~
+
+## 5.24
+
+There is a trouble in the training now! The agent seems to fall into local optimality. As shown in the log, at first, it doesn't know how to build the depot, so the population of SCV is stuck at 15. Then, it start to build the depot for increasing total population, in order to build more SCV to accelerate the collecting of mainral. But it is far from the goal of building marines.
+
+### test
+* The reward is no longer divided by the trajectory step.
+* Increase the warm-up phase.
+* Change the Loss design, it means to use other algorithem no longer DQN.
+* Change the default game parameters: 
+    * total steps 500 -> 600
+    * mineral rate function
+* VS random opponent agent
+* Add noise to the action prob from the model predict result
+* Add intrinsic reward
 ## TODO
 * ~~reset MCTS in new game environment~~
 * ~~train set in new game environment~~
