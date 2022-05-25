@@ -73,7 +73,12 @@ There is a trouble in the training now! The agent seems to fall into local optim
 * VS random opponent agent
 * Add noise to the action prob from the model predict result
 * Add intrinsic reward                                          
-    
+
+## 5.25
+
+I made a big mistake, when the agent generated data, it needed a randomicity, for example, random.choice from action prob , or add a noise to th action prob and sample the maxprob. If don't do this, the model will be stable and the choice in each step will be fixed. So you will see the same result of the game simulation.
+
+Another question is that I'm not clear how to keep the policy optimized monotonously.
 ## TODO
 * ~~reset MCTS in new game environment~~
 * ~~train set in new game environment~~
