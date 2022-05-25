@@ -91,14 +91,14 @@ class DQNAgent:
     def update_act(self):
         if len(self.cache) < self.batch_size:
             return
-
+        self.act_net = self.act_net.to('cuda')
         minibatch = random.sample(self.cache, self.batch_size)
         # TODO: the memory used maybe optimized better, it should to redesign the data stream and data store
-        state = torch.zeros((self.batch_size,self.n_observe)).to(self.device)
-        action = torch.zeros((self.batch_size,1),dtype=torch.long).to(self.device)
-        action_prob = torch.zeros((self.batch_size,self.n_action)).to(self.device)
-        reward = torch.zeros((self.batch_size,1)).to(self.device)
-        next_state = torch.zeros((self.batch_size,self.n_observe)).to(self.device)
+        state = torch.zeros((self.batch_size,self.n_observe)).to('cuda')
+        action = torch.zeros((self.batch_size,1),dtype=torch.long).to('cuda')
+        action_prob = torch.zeros((self.batch_size,self.n_action)).to('cuda')
+        reward = torch.zeros((self.batch_size,1)).to('cuda')
+        next_state = torch.zeros((self.batch_size,self.n_observe)).to('cuda')
         for i in range(len(minibatch)):
             state_, action_, action_prob_, reward_, next_state_ = minibatch[i]
             state[i] = state_
@@ -122,6 +122,7 @@ class DQNAgent:
         loss.backward()
         # clip_grad_norm_(self.act_net.parameters(), self.clip_grad)
         self.optimizer.step()
+        self.act_net = self.act_net.to(self.device)
         return loss.item()
 
     def act_predict(self, state):

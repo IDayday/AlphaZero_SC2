@@ -2,13 +2,13 @@ import torch
 import sys
 import argparse
 
-from trainer_bm3 import Trainer
+from trainer_bm2 import Trainer
 
 from bmgame import BMGame
 from dqn_agent import DQNBMAgent
 from dqn_model import DQNAgent
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '6'
+os.environ['CUDA_VISIBLE_DEVICES'] = '5'
 
 parser = argparse.ArgumentParser(description='DQN_MCTS for SC2 BuildMarines',
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -30,20 +30,23 @@ parser.add_argument('--num_simulations', type=int, default=200, help='Total numb
 parser.add_argument('--batch-size', type=int, default=512, help='batch size')
 parser.add_argument('--update_tgt', type=int, default=1, help='update target net')
 parser.add_argument('--noise', type=bool, default=True, help='add noise to the action prob when self-play')
+parser.add_argument('--num_processes', type=int, default=2, help='number of multiprocesses')
 # saving & checkpoint
 parser.add_argument('--save-path', type=str, default='model.pt', help='model path for saving')
 parser.add_argument('--checkpoint_iter', type=int, default=10, help='checkpoint iterations')
 parser.add_argument('--checkpoint', type=str, default='', help='checkpoint for resuming training')
-parser.add_argument('--model_path', type=str, default='./checkpoint/default_evaluate_sample/', help='model path for evaluation')
+parser.add_argument('--model_path', type=str, default='./checkpoint/default_evaluate_sample_multi/', help='model path for evaluation')
 parser.add_argument('--test-epoch', type=int, default=3, help='number of test epochs')
 args = parser.parse_args()
 
 
 if __name__ == '__main__':
     env = BMGame()
-
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f'Running on {device.type}')
+    if args.num_processes > 1:
+        device = torch.device("cpu")
+    else:
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f'Running on {device.type} and {args.num_processes} processes')
 
     dir_name = args.model_path
     if not os.path.exists(dir_name):

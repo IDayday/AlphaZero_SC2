@@ -79,7 +79,9 @@ There is a trouble in the training now! The agent seems to fall into local optim
 I made a big mistake, when the agent generated data, it needed a randomicity, for example, random.choice from action prob , or add a noise to th action prob and sample the maxprob. If don't do this, the model will be stable and the choice in each step will be fixed. So you will see the same result of the game simulation.
 
 Another question is that I'm not clear how to keep the policy optimized monotonously.
+
+**A simple parallelization method I implemented is through the Pipe function. It doesn't accelerate the rate of simulation but can get more trans data from parallelized simulation in one time.** 
 ## TODO
 * ~~reset MCTS in new game environment~~
 * ~~train set in new game environment~~
-* maybe the parallel training set
+* ~~maybe the parallel training set~~

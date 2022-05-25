@@ -4,6 +4,7 @@ import random
 import time
 import torch
 import torch.optim as optim
+import multiprocessing
 from cmath import *
 from wrappers import to_tensor, obs2tensor
 from monte_carlo_tree_search_bm import MCTS
@@ -19,8 +20,11 @@ class Trainer:
         self.args = args
         self.device = device
 
-    def simulation(self, obs, epoch):
-
+    def simulation(self, pipe, epoch):
+        print('parent process:', os.getppid())
+        print('process id:', os.getpid())
+        obs = pipe.recv()
+        print('new obs getting')
         train_examples = []
         current_player = 1 # our first
         # decay temperature parameter
@@ -28,7 +32,10 @@ class Trainer:
         
         while True:
             # simulating to get a root, and use it to take one step
-            self.mcts = MCTS(self.env, obs, self.agent, self.args, self.device)
+            if self.args.num_processes > 1:
+                self.mcts = MCTS(self.env, obs, self.agent, self.args, 'cpu')
+            else:
+                self.mcts = MCTS(self.env, obs, self.agent, self.args, self.device)
             root = self.mcts.run(current_player)
 
             action_probs = [0 for _ in range(5)]
@@ -61,9 +68,15 @@ class Trainer:
                     reward = value * ((-1) ** (hist_current_player == current_player))
                     ret.append((hist_state, hist_action, hist_action_probs, reward, hist_next_state))
 
-                return ret, obs
+                pipe.send([ret, obs])
 
     def learn(self):
+        # set for numpy and torch
+        os.environ['OPENBLAS_NUM_THREADS'] = '1'
+        np.set_printoptions(precision=5)
+        np.set_printoptions(suppress=True)
+        torch.set_num_threads(1)
+
         start = time.time()
         info_log = []
         for i in range(1, self.args.numIters + 1):
@@ -74,13 +87,34 @@ class Trainer:
             obs_copy = deepcopy(self.env.reset())
             # simulation of the whole game
             sim = time.time()
-            ret, obs_info = self.simulation(obs_copy, i)
-            print(f"simulation result : {obs_info} \n")
-            info_log.append(f"simulation result : {obs_info} \n")
+            # this simulation process can be parallelized
+            # pipe for multiprocesses
+            pipe_dict = dict((rank, (pipe1, pipe2)) for rank in range(self.args.num_processes) for pipe1, pipe2 in (multiprocessing.Pipe(),))
+            child_process_list = []
+            for p in range(self.args.num_processes):
+                pro = multiprocessing.Process(target=self.simulation, args=(pipe_dict[p][1],i,))
+                child_process_list.append(pro)
+            [pipe_dict[p][0].send(obs_copy) for p in range(self.args.num_processes)]
+            [p.start() for p in child_process_list]
+
+            for p in range(self.args.num_processes):
+                print(f'get trans from {p} process')
+                trans = pipe_dict[p][0].recv()
+                ret, obs_info = trans[0], trans[1]
+                # ret, obs_info = self.simulation(obs_copy, i)
+                self.agent.model.cache.extend(ret)
+
+                print(f"simulation result : {obs_info} \n")
+                info_log.append(f"simulation result : {obs_info} \n")
+            
+            [p.terminate() for p in child_process_list]        
+            print('stop process')
+            [p.join() for p in child_process_list] 
+            
             sim_end = round(time.time() - sim,2)
             print(f"simulation {i} cost {sim_end} second")
             info_log.append(f"simulation {i} cost {sim_end} second \n")
-            self.agent.model.cache.extend(ret)
+            
             print('simulation is over!')
             # if the data is enough, start training and update model
             if len(self.agent.model.cache) > self.args.batch_size and i >= self.args.warm_up:
@@ -111,9 +145,14 @@ class Trainer:
                         for k in model_list[:-1]:
                             op_model.load(os.path.join(self.args.model_path, k))
                             op_agent = DQNBMAgent_E(op_model, 'cpu', self.args)
-                            player, reward = self.evaluate(my_agent, op_agent)
-                            print(f"winner is {player} , reward is {reward} \n")
-                            info_log.append(f"winner is {player} , reward is {reward} \n")
+                            player, result = self.evaluate(my_agent, op_agent)
+                            print(f"winner is {player} , result is {result}")
+                            info_log.append(f"winner is {player} , result is {result} \n")
+            f = open(self.args.model_path + "log.txt", mode='a')
+            for info in info_log:
+                f.write(info)
+            f.close()
+            info_log = []
 
         end = round((time.time() - start)/60,2)
         print(f"learning completed! cost time: {end} min")
@@ -140,9 +179,9 @@ class Trainer:
             player *= -1
         value = self.env.get_value(obs, player)
         if value > 0:
-            return player, obs[8]
+            return player, obs
         elif value == 0:
-            return 0, obs[8]
+            return 0, obs
         elif value < 0:
-            return -1*player, obs[8]
+            return -1*player, obs
             

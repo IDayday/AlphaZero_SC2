@@ -7,7 +7,7 @@ import numpy as np
 class DQNBMAgent():
     def __init__(self, model, device, args=None):
         self.model = model
-        self.device =device
+        self.device = device
         self.args = args
         self.game = BMGame()
     

@@ -442,7 +442,7 @@ class BMGame:
         copy_obs = deepcopy(obs)
         gameover = self.check_gameover(copy_obs)
         if gameover:
-            print("The game is over")
+            # print("The game is over")
             return copy_obs, gameover
         else:
             available_action = self.check(copy_obs, player)

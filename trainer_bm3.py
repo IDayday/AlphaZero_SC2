@@ -128,11 +128,16 @@ class Trainer:
                 action_prob, _, _, available_actions = agent1.predict(obs, player)
             elif player == -1:
                 action_prob, _, _, available_actions = agent2.predict(obs, player)
+            # In fact, I have normalized action_prob in the predict function,
+            # but it still report the bug as "ValueError: probabilities do not sum to 1",
+            # I have to use numpy to normalize again
+            p = np.array(action_prob)
+            p /= p.sum()
             # use maxprob action
             # max_prob = action_prob.argmax(-1)
             # action = available_actions[max_prob]
             # use sample
-            action = np.random.choice(available_actions, p=action_prob)
+            action = np.random.choice(available_actions, p=p)
             obs, _ = self.env.step(obs, action, player)
             gameover = self.env.check_gameover(obs)
             player *= -1
