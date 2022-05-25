@@ -3,6 +3,7 @@
 #     print(i)
 #     print(act)
 
+from cmath import inf
 import torch
 import numpy as np
 
@@ -17,8 +18,8 @@ import numpy as np
 #     b.append(p)
 # print(b)
 
-a = [1,2,3,1,10]
-print(a[:-1])
+# a = [1,2,3,1,10]
+# print(a[:-1])
 # b = []
 # c = [[1,2,3],[4,2,6]]
 # a.extend(b)
@@ -55,3 +56,39 @@ print(a[:-1])
 # print(c)
 # print(a)
 
+# import torch
+# a = inf
+# if a == float("inf"):
+#     print('yes')
+# a = torch.randn((5,1))
+# b = a.sum()
+# c = a/b
+# print(a)
+# print(b)
+# print(c)
+# print(c.sum())
+
+# probs = [0.1,0.2,0.1,0.3,0.2,0.2,0.1]
+# p = np.random.dirichlet(0.3 * np.ones(len(probs)))
+# print(p.sum())
+
+# import numpy as np
+
+# s = 0
+# for k in range(10000):
+#     a =  np.random.randint(0,100000,128)
+#     # print(len(a))
+#     c = 0
+#     for i in range(len(a)):
+#         for j in range(i+1,len(a)):
+#             if abs(a[i]-a[j])<=5:
+#                 c += 1
+#     s += c
+# print(s)
+import torch
+import numpy as np
+act = [0,4,6,8,10]
+a = torch.tensor([0.1,0.2,0.5,0.1,0.1])
+b = np.random.choice(act,p=a)
+
+print(b)

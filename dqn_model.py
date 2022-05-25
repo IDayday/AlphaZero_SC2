@@ -23,8 +23,10 @@ class DQN(nn.Module):
 
     def forward(self, x):
         x = F.relu(self.hidden(x))
-        action = F.softmax(self.action(self.dropout(x)),dim=-1)
-        value = torch.tanh(self.value(self.dropout(x)))
+        # action = F.softmax(self.action(self.dropout(x)),dim=-1)
+        # value = torch.tanh(self.value(self.dropout(x)))
+        action = F.softmax(self.action(x),dim=-1)
+        value = torch.tanh(self.value(x))
         return action , value
 
 class Memory:
@@ -66,25 +68,25 @@ class DQNAgent:
         self.eps_decay = eps_decay
         self.eps_end = eps_end
 
-        self.tgt_net = DQN(n_observe, hidden_size, n_action).to(device)
+        # self.tgt_net = DQN(n_observe, hidden_size, n_action).to(device)
         self.act_net = DQN(n_observe, hidden_size, n_action).to(device)
-        self.criterion = nn.SmoothL1Loss()
+        self.criterion = nn.MSELoss()
         self.optimizer = torch.optim.Adam(self.act_net.parameters(), lr=lr)
         self.cache = deque(maxlen=self.memory_size) # or Memory(maxlen=self.memory_size)
         self.steps_done = 0
 
         self.act_net.apply(self.initialize_weights)
-        self.update_tgt()
+        # self.update_tgt()
         self.act_net.train()
-        self.tgt_net.eval()
+        # self.tgt_net.eval()
 
     @staticmethod
     def initialize_weights(m):
         if hasattr(m, 'weight') and m.weight.dim() > 1:
             nn.init.xavier_uniform_(m.weight.data)
 
-    def update_tgt(self):
-        self.tgt_net.load_state_dict(self.act_net.state_dict())
+    # def update_tgt(self):
+    #     self.tgt_net.load_state_dict(self.act_net.state_dict())
 
     def update_act(self):
         if len(self.cache) < self.batch_size:
@@ -104,22 +106,33 @@ class DQNAgent:
             action_prob[i] = to_tensor(action_prob_,self.device)
             reward[i] = reward_
             next_state[i] = next_state_
-        prob, _ = self.act_net(state)
-        prob_, _ = self.tgt_net(next_state)
-        pred_values = prob.gather(1, action).squeeze(-1)
-        tgt_values = prob_.max(1)[0].detach() * self.gamma + reward.squeeze(-1)
+        prob, value = self.act_net(state)
+        # prob_, value_ = self.tgt_net(next_state)
+
+        # pred_values = prob.gather(1, action).squeeze(-1)
+        # tgt_values = prob_.max(1)[0].detach() * self.gamma + reward.squeeze(-1)
+        # loss = self.criterion(pred_values, tgt_values)
+
+        # # define the loss = (z - v)^2 - pi^T * log(p) + c||theta||^2 (Note: the L2 penalty is incorporated in optimizer)
+        value_loss = self.criterion(value, reward)
+        policy_loss = -torch.mean(torch.sum(action_prob * torch.log(prob), 1))
+        loss = value_loss + policy_loss
 
         self.optimizer.zero_grad()
-        loss = self.criterion(pred_values, tgt_values)
         loss.backward()
-        clip_grad_norm_(self.act_net.parameters(), self.clip_grad)
+        # clip_grad_norm_(self.act_net.parameters(), self.clip_grad)
         self.optimizer.step()
         return loss.item()
 
-    def predict(self, state):
+    def act_predict(self, state):
         with torch.no_grad():
             action_prob, value = self.act_net(state.unsqueeze(0))
             return action_prob, value
+
+    # def tgt_predict(self, state):
+    #     with torch.no_grad():
+    #         action_prob, value = self.tgt_net(state.unsqueeze(0))
+    #         return action_prob, value
 
     def save(self, path, i):
         model_path = path + "model_" + str(i) + ".pt"
@@ -130,4 +143,4 @@ class DQNAgent:
     def load(self, path):
         model = torch.load(path)
         self.act_net.load_state_dict(model['model_state'])
-        self.tgt_net.load_state_dict(model['model_state'])
+        # self.tgt_net.load_state_dict(model['model_state'])

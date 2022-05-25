@@ -73,15 +73,15 @@ def obs2tensor(obs, player):
 
     # normalize
     if player == 1:
-        features= [n_scv/10,n_marine/10,n_population/10,n_population_cap/10, \
-                    n_depot/5,n_barracks/5,n_mainerals/1000,n_depot_producing/5,n_barracks_producing/5,\
-                    n_scv_op/10,n_marine_op/10,n_population_op/10,n_population_cap_op/10,\
-                    n_depot_op/5,n_barracks_op/5,n_mainerals_op/1000,n_depot_producing_op/5,n_barracks_producing_op/5]
+        features= [n_scv/10,n_marine/2,n_population/10,n_population_cap/10, \
+                    n_depot/5,n_barracks/2,n_mainerals/1000,n_depot_producing/5,n_barracks_producing/2,\
+                    n_scv_op/10,n_marine_op/2,n_population_op/10,n_population_cap_op/10,\
+                    n_depot_op/5,n_barracks_op/2,n_mainerals_op/1000,n_depot_producing_op/5,n_barracks_producing_op/2]
     elif player == -1:
-        features= [n_scv_op/10,n_marine_op/10,n_population_op/10,n_population_cap_op/10,\
-                    n_depot_op/5,n_barracks_op/5,n_mainerals_op/1000,n_depot_producing_op/5,n_barracks_producing_op/5,\
-                    n_scv/10,n_marine/10,n_population/10,n_population_cap/10, \
-                    n_depot/5,n_barracks/5,n_mainerals/1000,n_depot_producing/5,n_barracks_producing/5]
+        features= [n_scv_op/10,n_marine_op/2,n_population_op/10,n_population_cap_op/10,\
+                    n_depot_op/5,n_barracks_op/2,n_mainerals_op/1000,n_depot_producing_op/5,n_barracks_producing_op/2,\
+                    n_scv/10,n_marine/2,n_population/10,n_population_cap/10, \
+                    n_depot/5,n_barracks/2,n_mainerals/1000,n_depot_producing/5,n_barracks_producing/2]
     features = torch.from_numpy(np.array(features)).float()
 
     return features
