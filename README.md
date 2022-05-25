@@ -81,6 +81,46 @@ I made a big mistake, when the agent generated data, it needed a randomicity, fo
 Another question is that I'm not clear how to keep the policy optimized monotonously.
 
 **A simple parallelization method I implemented is through the Pipe function. It doesn't accelerate the rate of simulation but can get more trans data from parallelized simulation in one time.** 
+
+##5.26
+
+I have encountered something strange, my multi-threaded simulation results are exactly the same, whether I set a global random seed or an in-thread random seed, the results of both threads are always the same, and the results of multiple iterations are also the same, I am currently still not figuring out what the reason is, I plan to rewrite the parallelization code.
+
+~~~bash
+Running on cpu and 2 processes
+simulation start : 1/500
+parent process: 790
+process id: 947
+new obs getting
+get trans from 0 process
+parent process: 790
+process id: 948
+new obs getting
+simulation result : [[32.0, 30.0, 7732.0], [159, 104, 63, 27], [12, 7], [[6, 11, 14], [2, 3, 4, 6, 7, 10, 16, 20, 23, 24, 25], [], [32, 47]], [87.5, 30.0, 7287.5], [111, 111, 65, 37], [8, 5], [[2, 5, 7], [3, 6, 11, 14, 17, 22], [], [59]], [27, 37], [289, 288]] 
+
+get trans from 1 process
+simulation result : [[32.0, 30.0, 7732.0], [159, 104, 63, 27], [12, 7], [[6, 11, 14], [2, 3, 4, 6, 7, 10, 16, 20, 23, 24, 25], [], [32, 47]], [87.5, 30.0, 7287.5], [111, 111, 65, 37], [8, 5], [[2, 5, 7], [3, 6, 11, 14, 17, 22], [], [59]], [27, 37], [289, 288]] 
+
+stop process
+simulation 1 cost 105.25 second
+simulation is over!
+simulation start : 2/500
+parent process: 790
+process id: 1121
+new obs getting
+get trans from 0 process
+parent process: 790
+process id: 1122
+new obs getting
+simulation result : [[32.0, 30.0, 7732.0], [159, 104, 63, 27], [12, 7], [[6, 11, 14], [2, 3, 4, 6, 7, 10, 16, 20, 23, 24, 25], [], [32, 47]], [87.5, 30.0, 7287.5], [111, 111, 65, 37], [8, 5], [[2, 5, 7], [3, 6, 11, 14, 17, 22], [], [59]], [27, 37], [289, 288]] 
+
+get trans from 1 process
+simulation result : [[32.0, 30.0, 7732.0], [159, 104, 63, 27], [12, 7], [[6, 11, 14], [2, 3, 4, 6, 7, 10, 16, 20, 23, 24, 25], [], [32, 47]], [87.5, 30.0, 7287.5], [111, 111, 65, 37], [8, 5], [[2, 5, 7], [3, 6, 11, 14, 17, 22], [], [59]], [27, 37], [289, 288]] 
+
+stop process
+simulation 2 cost 105.11 second
+simulation is over!
+~~~
 ## TODO
 * ~~reset MCTS in new game environment~~
 * ~~train set in new game environment~~
