@@ -20,11 +20,15 @@ class Trainer:
         self.args = args
         self.device = device
 
+
     def simulation(self, pipe, epoch):
         print('parent process:', os.getppid())
         print('process id:', os.getpid())
         obs = pipe.recv()
         print('new obs getting')
+        seed = np.random.randint(0,1000)
+        torch.manual_seed(seed)
+        np.random.seed(seed)
         train_examples = []
         current_player = 1 # our first
         # decay temperature parameter

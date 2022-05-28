@@ -142,6 +142,6 @@ class DQNAgent:
         }, model_path)
 
     def load(self, path):
-        model = torch.load(path)
+        model = torch.load(path, map_location=torch.device('cpu'))
         self.act_net.load_state_dict(model['model_state'])
         # self.tgt_net.load_state_dict(model['model_state'])

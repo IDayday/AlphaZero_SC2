@@ -85,10 +85,35 @@ import numpy as np
 #                 c += 1
 #     s += c
 # print(s)
-import torch
-import numpy as np
-act = [0,4,6,8,10]
-a = torch.tensor([0.1,0.2,0.5,0.1,0.1])
-b = np.random.choice(act,p=a)
+# import torch
+# import numpy as np
+# act = [0,4,6,8,10]
+# a = torch.tensor([0.1,0.2,0.5,0.1,0.1])
+# b = np.random.choice(act,p=a)
 
-print(b)
+# print(b)
+
+# import multiprocessing
+# import time
+# def func(msg):
+#   for i in range(3):
+#     print (msg)
+#     time.sleep(1)
+#   return "done " + msg
+# if __name__ == "__main__":
+#     pool = multiprocessing.Pool(processes=4)
+#     result = []
+#     for i in range(10):
+#         msg = "hello %d" %(i)
+#         result.append(pool.apply_async(func, (msg, )))
+#     pool.close()
+#     pool.join()
+#     for res in result:
+#         print (res.get())
+#         print ("Sub-process(es) done.")
+x = [1,2,3]
+y = [2,3,4]
+a = [x, y]
+c, d = a
+print(c)
+print(d)

@@ -121,6 +121,17 @@ stop process
 simulation 2 cost 105.11 second
 simulation is over!
 ~~~
+
+## 5.28
+
+🏆🏆🏆
+**Congradulation myself, I have finished the multiprocesses evaluating program.**
+
+The "top" reflect the CPU used information as follow:
+<img src='top.jpg' width=600>
+
+
+
 ## TODO
 * ~~reset MCTS in new game environment~~
 * ~~train set in new game environment~~
