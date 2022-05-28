@@ -137,8 +137,8 @@ simulation is over!
 
 Where the number in the axis means the iterations of checkpoint. And the number in the box means win rate. The performance getting better.
 
-👊👊👊
-**Tonight belongs to UEFA Champions League**
+👊👊👊  
+**Tonight belongs to UEFA Champions League**  
 **Tomorrow belongs to LOL MSI**
 
 ## TODO
