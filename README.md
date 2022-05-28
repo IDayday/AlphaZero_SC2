@@ -127,8 +127,15 @@ simulation is over!
 🏆🏆🏆
 **Congradulation myself, I have finished the multiprocesses evaluating program.**
 
-The "top" reflect the CPU used information as follow:
+* The "top" reflect the CPU used information as follow:
 <img src='top.jpg' width=600>
+
+* evaluating 45 checkpoints needs 1735 seconds
+* The evaluting results as follow:
+
+<img src='eva_result.jpg' width=600>
+
+Where the number in the axis means the iterations of checkpoint. And the number in the box means win rate. The performance getting better.
 
 👊👊👊
 **Tonight belongs to UEFA Champions League**
