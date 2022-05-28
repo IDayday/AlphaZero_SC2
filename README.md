@@ -130,7 +130,9 @@ simulation is over!
 The "top" reflect the CPU used information as follow:
 <img src='top.jpg' width=600>
 
-
+👊👊👊
+**Tonight belongs to UEFA Champions League**
+**Tomorrow belongs to LOL MSI**
 
 ## TODO
 * ~~reset MCTS in new game environment~~
