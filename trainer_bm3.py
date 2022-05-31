@@ -69,35 +69,38 @@ class Trainer:
         for i in range(1, self.args.numIters + 1):
 
             print("simulation start : {}/{}".format(i, self.args.numIters))
-            info_log.append("simulation start : {}/{} \n".format(i, self.args.numIters))
+            # info_log.append("simulation start : {}/{} \n".format(i, self.args.numIters))
             # copying env for simulation
             obs_copy = deepcopy(self.env.reset())
             # simulation of the whole game
             sim = time.time()
             ret, obs_info = self.simulation(obs_copy, i)
             print(f"simulation result : {obs_info}")
-            info_log.append(f"simulation result : {obs_info} \n")
+            # info_log.append(f"simulation result : {obs_info} \n")
             sim_end = round(time.time() - sim,2)
             print(f"simulation {i} cost {sim_end} second")
-            info_log.append(f"simulation {i} cost {sim_end} second \n")
+            # info_log.append(f"simulation {i} cost {sim_end} second \n")
             self.agent.model.cache.extend(ret)
             print('simulation is over!')
             # if the data is enough, start training and update model
             if len(self.agent.model.cache) > self.args.batch_size and i >= self.args.warm_up:
                 print('start training!')
-                info_log.append('start training! \n')
+                # info_log.append('start training! \n')
                 for j in range(self.args.epochs):
-                    loss = self.agent.model.update_act()
+                    loss, value_loss, policy_loss = self.agent.model.update_act()
                     print(f"epoch {j} batchloss: {loss}")
                     info_log.append(f"epoch {j} batchloss: {loss} \n")
+                    info_log.append(f"epoch {j} batch_value_loss: {value_loss} \n")
+                    info_log.append(f"epoch {j} batch_policy_loss: {policy_loss} \n")
                 if i % self.args.checkpoint_iter == 0:
                     self.agent.model.save(self.args.model_path, i)
                     print("model saved")
-                    info_log.append("model saved \n")
+                    # info_log.append("model saved \n")
                     model_list = os.listdir(self.args.model_path)
+                    model_list.remove('log.txt')
                     if len(model_list) >1 :
                         print("Evaluating!")
-                        info_log.append("Evaluating! \n")
+                        # info_log.append("Evaluating! \n")
                         my_model = DQNAgent(18, self.args.hidden_size, 5, 'cpu')
                         my_model.load(os.path.join(self.args.model_path,model_list[-1]))
                         my_agent = DQNBMAgent_E(my_model, 'cpu', self.args)
@@ -108,16 +111,22 @@ class Trainer:
                             op_agent = DQNBMAgent_E(op_model, 'cpu', self.args)
                             player, reward = self.evaluate(my_agent, op_agent)
                             print(f"winner is {player} , reward is {reward} \n")
-                            info_log.append(f"winner is {player} , reward is {reward} \n")
+                            # info_log.append(f"winner is {player} , reward is {reward} \n")
 
-        end = round((time.time() - start)/60,2)
-        print(f"learning completed! cost time: {end} min")
-        info_log.append(f"learning completed! cost time: {end} min \n")
+            f = open(self.args.model_path + "log.txt", mode='a')
+            for info in info_log:
+                f.write(info)
+            f.close()
+            info_log = []
 
-        f = open(self.args.model_path + "log.txt", mode='a')
-        for info in info_log:
-            f.write(info)
-        f.close()
+        # end = round((time.time() - start)/60,2)
+        # print(f"learning completed! cost time: {end} min")
+        # info_log.append(f"learning completed! cost time: {end} min \n")
+
+        # f = open(self.args.model_path + "log.txt", mode='a')
+        # for info in info_log:
+        #     f.write(info)
+        # f.close()
 
     def evaluate(self, agent1, agent2):
         obs = self.env.reset()

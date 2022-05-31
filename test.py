@@ -100,20 +100,45 @@ import numpy as np
 #     print (msg)
 #     time.sleep(1)
 #   return "done " + msg
-# if __name__ == "__main__":
-#     pool = multiprocessing.Pool(processes=4)
-#     result = []
-#     for i in range(10):
-#         msg = "hello %d" %(i)
-#         result.append(pool.apply_async(func, (msg, )))
-#     pool.close()
-#     pool.join()
-#     for res in result:
-#         print (res.get())
-#         print ("Sub-process(es) done.")
-x = [1,2,3]
-y = [2,3,4]
-a = [x, y]
-c, d = a
-print(c)
-print(d)
+# # if __name__ == "__main__":
+# pool = multiprocessing.Pool(processes=4)
+# result = []
+# for i in range(10):
+#     msg = "hello %d" %(i)
+#     result.append(pool.apply_async(func, (msg, )))
+# pool.close()
+# pool.join()
+# for res in result:
+#     print (res.get())
+#     print ("Sub-process(es) done.")
+# x = [1,2,3]
+# y = [2,3,4]
+# a = [x, y]
+# c, d = a
+# print(c)
+# print(d)
+# import random
+# print(random.randint(0,1000))
+
+
+from multiprocessing import Pool
+import time
+
+def f(x):
+    time.sleep(5)
+    return x*x
+
+if __name__ == '__main__':
+    with Pool(processes=4) as pool:         # start 4 worker processes
+        result = pool.apply_async(f, (10,)) # evaluate "f(10)" asynchronously in a single process
+        print(result.get())        # prints "100" unless your computer is *very* slow
+
+        print(pool.map(f, range(10)))       # prints "[0, 1, 4,..., 81]"
+
+        it = pool.imap(f, range(10))
+        print(next(it))                     # prints "0"
+        print(next(it))                     # prints "1"
+        print(it.next())           # prints "4" unless your computer is *very* slow
+
+        result = pool.apply_async(time.sleep, (10,))
+        print(result.get())        # raises multiprocessing.TimeoutError

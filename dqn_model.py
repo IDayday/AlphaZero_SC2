@@ -123,7 +123,7 @@ class DQNAgent:
         # clip_grad_norm_(self.act_net.parameters(), self.clip_grad)
         self.optimizer.step()
         self.act_net = self.act_net.to(self.device)
-        return loss.item()
+        return loss.item(), value_loss.item(), policy_loss.item()
 
     def act_predict(self, state):
         with torch.no_grad():

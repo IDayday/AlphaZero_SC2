@@ -141,6 +141,20 @@ Where the number in the axis means the iterations of checkpoint. And the number 
 **Tonight belongs to UEFA Champions League**  
 **Tomorrow belongs to LOL MSI**
 
+
+## 5.29
+
+The parallel training setting can only run in debug mode. I haven't overcome this bug, it seems a little difficult.
+
+## 5.31
+
+When evaluating the checkpoints, the entropy of the action probability distribution as follow:
+
+<img src='entropy.jpg' width=800>
+
+As the training progresses, the entropy of the action probability distribution output by the policy gradually increases, and the mean and variance tend to be stable when approaching the convergence.
+
+
 ## TODO
 * ~~reset MCTS in new game environment~~
 * ~~train set in new game environment~~

@@ -1,4 +1,5 @@
 import os
+from socket import timeout
 import numpy as np
 import random
 import time
@@ -21,14 +22,16 @@ class Trainer:
         self.device = device
 
 
-    def simulation(self, pipe, epoch):
+    def simulation(self, obs, epoch):
         print('parent process:', os.getppid())
         print('process id:', os.getpid())
-        obs = pipe.recv()
+        # obs = pipe.recv()
         print('new obs getting')
-        seed = np.random.randint(0,1000)
+        seed = random.randint(0,1000)
         torch.manual_seed(seed)
+        # the np.random.seed will fork the main process, so we need reset again
         np.random.seed(seed)
+        obs = deepcopy(obs)
         train_examples = []
         current_player = 1 # our first
         # decay temperature parameter
@@ -72,19 +75,20 @@ class Trainer:
                     reward = value * ((-1) ** (hist_current_player == current_player))
                     ret.append((hist_state, hist_action, hist_action_probs, reward, hist_next_state))
 
-                pipe.send([ret, obs])
+                # pipe.send([ret, obs])
+                return ret, obs
 
     def learn(self):
         # set for numpy and torch
-        os.environ['OPENBLAS_NUM_THREADS'] = '1'
+        # os.environ['OPENBLAS_NUM_THREADS'] = '1'
         np.set_printoptions(precision=5)
         np.set_printoptions(suppress=True)
-        torch.set_num_threads(1)
+        # torch.set_num_threads(1)
 
         start = time.time()
         info_log = []
         for i in range(1, self.args.numIters + 1):
-
+            pool = multiprocessing.Pool(processes=self.args.num_processes)
             print("simulation start : {}/{}".format(i, self.args.numIters))
             info_log.append("simulation start : {}/{} \n".format(i, self.args.numIters))
             # copying env for simulation
@@ -92,34 +96,71 @@ class Trainer:
             # simulation of the whole game
             sim = time.time()
             # this simulation process can be parallelized
-            # pipe for multiprocesses
-            pipe_dict = dict((rank, (pipe1, pipe2)) for rank in range(self.args.num_processes) for pipe1, pipe2 in (multiprocessing.Pipe(),))
-            child_process_list = []
-            for p in range(self.args.num_processes):
-                pro = multiprocessing.Process(target=self.simulation, args=(pipe_dict[p][1],i,))
-                child_process_list.append(pro)
-            [pipe_dict[p][0].send(obs_copy) for p in range(self.args.num_processes)]
-            [p.start() for p in child_process_list]
+            ##### pipe for multiprocesses
+            # pipe_dict = dict((rank, (pipe1, pipe2)) for rank in range(self.args.num_processes) for pipe1, pipe2 in (multiprocessing.Pipe(),))
+            # child_process_list = []
+            # for p in range(self.args.num_processes):
+            #     pro = multiprocessing.Process(target=self.simulation, args=(pipe_dict[p][1],i,))
+            #     child_process_list.append(pro)
+            # [pipe_dict[p][0].send(obs_copy) for p in range(self.args.num_processes)]
+            # [p.start() for p in child_process_list]
 
-            for p in range(self.args.num_processes):
-                print(f'get trans from {p} process')
-                trans = pipe_dict[p][0].recv()
-                ret, obs_info = trans[0], trans[1]
-                # ret, obs_info = self.simulation(obs_copy, i)
-                self.agent.model.cache.extend(ret)
+            # for p in range(self.args.num_processes):
+            #     print(f'get trans from {p} process')
+            #     trans = pipe_dict[p][0].recv()
+            #     ret, obs_info = trans[0], trans[1]
+            #     # ret, obs_info = self.simulation(obs_copy, i)
+            #     self.agent.model.cache.extend(ret)
 
-                print(f"simulation result : {obs_info} \n")
-                info_log.append(f"simulation result : {obs_info} \n")
-            
-            [p.terminate() for p in child_process_list]        
-            print('stop process')
-            [p.join() for p in child_process_list] 
-            
+            #     print(f"simulation result : {obs_info} \n")
+            #     info_log.append(f"simulation result : {obs_info} \n")
+
+            # [p.terminate() for p in child_process_list]        
+            # print('stop process')
+            # [p.join() for p in child_process_list] 
+
+
+
+            ##### pool for multiprocesses
+            result = []
+            for m in range(self.args.num_processes):
+                result.append(pool.apply_async(self.simulation, (obs_copy, i)))
+            pool.close()
+            pool.join()
             sim_end = round(time.time() - sim,2)
             print(f"simulation {i} cost {sim_end} second")
             info_log.append(f"simulation {i} cost {sim_end} second \n")
-            
             print('simulation is over!')
+            for res in result:
+                # it will get the error: 
+                # multiprocessing.pool.MaybeEncodingError: 
+                # Error sending result:   Reason: 'OSError(24, 'Too many open files')'
+                # this bug may come from limit on number of file descriptors
+                # "ulimit -n" can check the limit on number of file descriptors
+                ret, obs_info = res.get() 
+                self.agent.model.cache.extend(ret)
+                print(f"simulation result : {obs_info} \n")
+                info_log.append(f"simulation result : {obs_info} \n")
+
+            
+            ##### pool for multiprocesses debug
+            # result = []
+            # # for m in range(self.args.num_processes):
+            # with multiprocessing.Pool(processes=self.args.num_processes) as pool:
+            #     result.append(pool.apply_async(self.simulation, (obs_copy, i)))
+            #     # pool.close()
+            #     # pool.join()
+            # for res in result:
+            #     ret, obs_info = res.get() 
+            #     self.agent.model.cache.extend(ret)
+            #     print(f"simulation result : {obs_info} \n")
+            #     info_log.append(f"simulation result : {obs_info} \n")
+            # sim_end = round(time.time() - sim,2)
+            # print(f"simulation {i} cost {sim_end} second")
+            # info_log.append(f"simulation {i} cost {sim_end} second \n")
+            # print('simulation is over!')
+
+
             # if the data is enough, start training and update model
             if len(self.agent.model.cache) > self.args.batch_size and i >= self.args.warm_up:
                 print('start training!')
