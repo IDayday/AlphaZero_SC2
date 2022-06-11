@@ -154,8 +154,50 @@ When evaluating the checkpoints, the entropy of the action probability distribut
 
 As the training progresses, the entropy of the action probability distribution output by the policy gradually increases, and the mean and variance tend to be stable when approaching the convergence.
 
+## 6.11
+
+🤾‍♂️🤾‍♂️🤾‍♂️
+Congrats to the GW, Curry is the big man.
+
+After all kinds of hardships, the multi-process trial version finally succeeded, you can see the detials in the branch "multi". It also contains some algorithmic improvements.
+
+~~~bash
+simulation start : 1/500 
+rank 10 simulation 1 cost 50.19 second 
+simulation result : [[518.0, 28.0, 7668.0], [147, 116, 50, 53], [11, 1], [[], [1, 3, 5, 6, 8, 10, 11, 15, 18, 20, 22, 23, 25], [], [59]], [49.5, 30.0, 7349.5], [123, 111, 61, 38], [9, 5], [[17], [1, 5, 8, 9, 10, 16, 17, 18, 20, 22, 23], [], [48]], [53, 38], [288, 288]] 
+rank 8 simulation 1 cost 50.9 second 
+simulation result : [[166.0, 27.0, 7666.0], [147, 120, 44, 65], [11, 3], [[], [3, 7, 9, 14, 15, 16, 18, 20, 22, 24, 25], [], []], [53.0, 29.0, 7353.0], [123, 111, 58, 41], [9, 6], [[9], [2, 8, 10, 14, 15, 16, 18, 22, 23, 24, 25], [], []], [65, 41], [293, 293]] 
+rank 3 simulation 1 cost 51.85 second 
+simulation result : [[2600.0, 29.0, 7750.0], [147, 76, 56, 1], [11, 2], [[], [2, 3, 4, 5, 7, 8, 9, 12, 13, 14, 15, 16, 17, 20, 21, 22, 23, 24, 25], [], []], [112.75, 30.0, 7262.75], [123, 108, 60, 36], [9, 6], [[11, 17], [3, 6, 8, 9, 11, 12, 14, 16, 20, 21], [], []], [1, 36], [288, 287]] 
+rank 4 simulation 1 cost 52.31 second 
+simulation result : [[74.0, 28.0, 7724.0], [147, 120, 47, 59], [11, 4], [[15], [1, 2, 6, 7, 8, 10, 11, 13, 15, 17, 19, 22, 24], [], []], [50.0, 29.0, 7300.0], [123, 107, 58, 35], [9, 7], [[13], [1, 2, 4, 8, 10, 11, 13, 15, 16, 18, 20, 23, 25], [], []], [59, 35], [291, 290]] 
+rank 7 simulation 1 cost 54.88 second 
+simulation result : [[68.0, 26.0, 7518.0], [171, 118, 36, 67], [13, 2], [[16], [1, 2, 5, 8, 9, 11, 13, 14, 16, 17, 18, 19, 21, 22], [], []], [239.75, 29.0, 7489.75], [99, 99, 58, 41], [7, 4], [[], [], [], [23, 27, 37, 46, 48, 49, 53]], [67, 41], [295, 295]] 
+rank 2 simulation 1 cost 55.52 second 
+simulation result : [[28.0, 26.0, 7528.0], [159, 118, 37, 66], [12, 3], [[], [1, 3, 4, 7, 9, 11, 12, 13, 16, 18, 19, 21, 22, 23, 25], [], []], [277.5, 29.0, 7477.5], [111, 111, 56, 47], [8, 5], [[2, 5, 9], [1, 8, 9, 12, 16], [], [32]], [66, 47], [294, 293]] 
+rank 9 simulation 1 cost 57.16 second 
+simulation result : [[1059.0, 28.0, 7609.0], [159, 102, 48, 41], [12, 2], [[], [2, 3, 4, 5, 9, 12, 13, 14, 15, 20, 22, 23, 24], [], []], [48.5, 29.0, 7398.5], [111, 111, 58, 44], [8, 5], [[6], [1, 2, 4, 6, 8, 9, 11, 16], [], [55, 60]], [41, 44], [290, 290]] 
+rank 5 simulation 1 cost 57.71 second 
+simulation result : [[84.0, 27.0, 7684.0], [147, 122, 45, 67], [11, 2], [[], [1, 3, 5, 8, 9, 10, 15, 17, 19, 24], [], [58]], [118.75, 29.0, 7318.75], [123, 106, 52, 41], [9, 7], [[4, 5, 9, 10], [1, 3, 6, 7, 14, 16, 19, 21, 22], [], []], [67, 41], [294, 293]] 
+rank 1 simulation 1 cost 58.2 second 
+simulation result : [[119.0, 28.0, 7669.0], [159, 122, 50, 56], [12, 2], [[], [1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 16, 17, 18, 21, 22, 24], [], []], [98.75, 30.0, 7348.75], [111, 109, 61, 34], [8, 7], [[9], [2, 3, 5, 6, 8, 10, 12, 13, 15, 18, 21, 22, 23], [], []], [56, 34], [290, 290]] 
+rank 6 simulation 1 cost 58.98 second 
+simulation result : [[357.0, 27.0, 7607.0], [159, 116, 44, 57], [12, 1], [[14, 16], [2, 4, 6, 8, 10, 11, 13, 14, 15, 17, 20, 21, 25], [], [58]], [52.5, 29.0, 7402.5], [111, 111, 59, 38], [8, 6], [[4, 10, 14, 17], [3, 5, 6, 8, 11, 13, 14, 16, 21, 23], [], [27]], [57, 38], [292, 291]] 
+start training! 
+epoch 0 batchloss: (3.211031436920166, 1.65144944190979, 1.5595818758010864) 
+epoch 1 batchloss: (2.581749200820923, 1.2176967859268188, 1.364052414894104) 
+epoch 2 batchloss: (2.4575068950653076, 1.1275615692138672, 1.3299453258514404) 
+epoch 3 batchloss: (2.1349072456359863, 0.8752843737602234, 1.2596228122711182) 
+epoch 4 batchloss: (2.201287031173706, 0.9719098806381226, 1.2293771505355835) 
+~~~
+
+
 
 ## TODO
 * ~~reset MCTS in new game environment~~
 * ~~train set in new game environment~~
 * ~~maybe the parallel training set~~
+
+## Others
+
+In general, setting up such a perfect information dynamic zero-sum game is solvable, and its bottleneck is usually computing power. But in fact, the game can be set up to be a little more challenging, such as a static zero-sum game with imperfect information. That is, at each moment, both players make decisions at the same time, instead of taking turns to make decisions.

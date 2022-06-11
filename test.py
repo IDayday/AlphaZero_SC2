@@ -6,6 +6,7 @@
 from cmath import inf
 import torch
 import numpy as np
+print(torch.multiprocessing.get_sharing_strategy())
 
 # a = np.array([0,1,2,3,4,5])
 # if 5 in a:
@@ -121,24 +122,24 @@ import numpy as np
 # print(random.randint(0,1000))
 
 
-from multiprocessing import Pool
-import time
+# from multiprocessing import Pool
+# import time
 
-def f(x):
-    time.sleep(5)
-    return x*x
+# def f(x):
+#     time.sleep(5)
+#     return x*x
 
-if __name__ == '__main__':
-    with Pool(processes=4) as pool:         # start 4 worker processes
-        result = pool.apply_async(f, (10,)) # evaluate "f(10)" asynchronously in a single process
-        print(result.get())        # prints "100" unless your computer is *very* slow
+# if __name__ == '__main__':
+#     with Pool(processes=4) as pool:         # start 4 worker processes
+#         result = pool.apply_async(f, (10,)) # evaluate "f(10)" asynchronously in a single process
+#         print(result.get())        # prints "100" unless your computer is *very* slow
 
-        print(pool.map(f, range(10)))       # prints "[0, 1, 4,..., 81]"
+#         print(pool.map(f, range(10)))       # prints "[0, 1, 4,..., 81]"
 
-        it = pool.imap(f, range(10))
-        print(next(it))                     # prints "0"
-        print(next(it))                     # prints "1"
-        print(it.next())           # prints "4" unless your computer is *very* slow
+#         it = pool.imap(f, range(10))
+#         print(next(it))                     # prints "0"
+#         print(next(it))                     # prints "1"
+#         print(it.next())           # prints "4" unless your computer is *very* slow
 
-        result = pool.apply_async(time.sleep, (10,))
-        print(result.get())        # raises multiprocessing.TimeoutError
+#         result = pool.apply_async(time.sleep, (10,))
+#         print(result.get())        # raises multiprocessing.TimeoutError

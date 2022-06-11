@@ -4,7 +4,7 @@ from bmgame import BMGame
 import random
 import numpy as np
 
-class DQNBMAgent():
+class BMAgent():
     def __init__(self, model, device, args=None):
         self.model = model
         self.device = device
@@ -45,7 +45,7 @@ class DQNBMAgent():
 
 
 
-class DQNBMAgent_E():
+class BMAgent_E():
     def __init__(self, model, device, args=None):
         self.model = model
         self.device =device

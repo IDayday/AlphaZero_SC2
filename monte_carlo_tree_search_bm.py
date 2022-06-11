@@ -98,17 +98,17 @@ class MCTS:
         self.args = args
         self.device = device
 
-    def run(self, current_player):
+    def run(self, current_player, max_search):
 
         root = Node(0, current_player, obs=self.obs) # set the beginning root by obs
         # EXPAND root
         # predict the normalized action_probs
-        action_probs, _ , combine_state, available_actions = self.agent.predict(root.obs, root.current_player)
+        root_action_probs, _ , combine_state, root_available_actions = self.agent.predict(root.obs, root.current_player)
         root.state = combine_state
-        root.expand(current_player, action_probs, available_actions)
+        root.expand(current_player, root_action_probs, root_available_actions)
 
         # simulate under the maxsteps
-        for _ in range(self.args.num_simulations):
+        for _ in range(max_search):
             node = root
             search_path = [node]
             # SELECT
@@ -133,7 +133,7 @@ class MCTS:
                 child.expand(child.current_player, action_probs, available_actions)
             self.backpropagate(search_path, value, parent.current_player * -1)
 
-        return root
+        return root, root_action_probs, root_available_actions
 
     def backpropagate(self, search_path, value, current_player):
         """

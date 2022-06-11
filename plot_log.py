@@ -8,7 +8,7 @@ import ast
 import matplotlib.pyplot as plt
 
 log = []
-with open('evaluatelog.txt',mode='r') as f:
+with open('evaluatelog_sample_vs_max.txt',mode='r') as f:
     lines = f.readlines()
     for i in lines:
         i.strip()
@@ -47,5 +47,5 @@ f, ax1 = plt.subplots(figsize=(9,9),nrows=1)
 sns.heatmap(log_array, annot=True, ax=ax1).invert_yaxis()
 ax1.set_xlabel("checkpoints",fontsize=15)
 ax1.set_ylabel("checkpoints",fontsize=15)
-plt.savefig('./eva_result.eps')
-# plt.savefig('./eva_result.jpg')
+# plt.savefig('./eva_result.eps')
+plt.savefig('./eva_sample_vs_max_result.jpg')

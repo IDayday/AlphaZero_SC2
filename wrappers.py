@@ -85,3 +85,19 @@ def obs2tensor(obs, player):
     features = torch.from_numpy(np.array(features)).float()
 
     return features
+
+def cal_steps(root_action_probs, action_probs, max_search):
+    for k,v in enumerate(root_action_probs[0]):
+        if v == 0:
+            root_action_probs[0][k] = 1e-4
+    root_action_probs = root_action_probs/torch.sum(root_action_probs)
+    for k,v in enumerate(action_probs[0]):
+        if v == 0:
+            action_probs[0][k] = 1e-4
+    action_probs = action_probs/torch.sum(action_probs)
+    kl = torch.sum(action_probs * torch.log(action_probs), 1) - torch.sum(action_probs * torch.log(root_action_probs), 1).item()
+    if kl >= 0.002:
+        steps = max_search
+    else:
+        steps = 50 + round((max_search-50)*float(kl)/0.002)
+    return steps

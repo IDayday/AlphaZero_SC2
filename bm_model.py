@@ -50,7 +50,7 @@ class Memory:
         return len(self.memory)
 
 
-class DQNAgent:
+class Agent:
     def __init__(self, n_observe, hidden_size, n_action, device,
                  lr=1e-2, batch_size=64, memory_size=10000, gamma=0.99,
                  clip_grad=1.0, eps_start=0.9, eps_decay=200, eps_end=0.05):
@@ -68,7 +68,6 @@ class DQNAgent:
         self.eps_decay = eps_decay
         self.eps_end = eps_end
 
-        # self.tgt_net = DQN(n_observe, hidden_size, n_action).to(device)
         self.act_net = DQN(n_observe, hidden_size, n_action).to(device)
         self.criterion = nn.MSELoss()
         self.optimizer = torch.optim.Adam(self.act_net.parameters(), lr=lr)
@@ -76,17 +75,13 @@ class DQNAgent:
         self.steps_done = 0
 
         self.act_net.apply(self.initialize_weights)
-        # self.update_tgt()
         self.act_net.train()
-        # self.tgt_net.eval()
+
 
     @staticmethod
     def initialize_weights(m):
         if hasattr(m, 'weight') and m.weight.dim() > 1:
             nn.init.xavier_uniform_(m.weight.data)
-
-    # def update_tgt(self):
-    #     self.tgt_net.load_state_dict(self.act_net.state_dict())
 
     def update_act(self):
         if len(self.cache) < self.batch_size:
@@ -103,15 +98,10 @@ class DQNAgent:
             state_, action_, action_prob_, reward_, next_state_ = minibatch[i]
             state[i] = state_
             action[i] = action_
-            action_prob[i] = to_tensor(action_prob_,self.device)
+            action_prob[i] = action_prob_
             reward[i] = reward_
             next_state[i] = next_state_
         prob, value = self.act_net(state)
-        # prob_, value_ = self.tgt_net(next_state)
-
-        # pred_values = prob.gather(1, action).squeeze(-1)
-        # tgt_values = prob_.max(1)[0].detach() * self.gamma + reward.squeeze(-1)
-        # loss = self.criterion(pred_values, tgt_values)
 
         # # define the loss = (z - v)^2 - pi^T * log(p) + c||theta||^2 (Note: the L2 penalty is incorporated in optimizer)
         value_loss = self.criterion(value, reward)
@@ -130,11 +120,6 @@ class DQNAgent:
             action_prob, value = self.act_net(state.unsqueeze(0))
             return action_prob, value
 
-    # def tgt_predict(self, state):
-    #     with torch.no_grad():
-    #         action_prob, value = self.tgt_net(state.unsqueeze(0))
-    #         return action_prob, value
-
     def save(self, path, i):
         model_path = path + "model_" + str(i) + ".pt"
         torch.save({
@@ -144,4 +129,4 @@ class DQNAgent:
     def load(self, path):
         model = torch.load(path, map_location=torch.device('cpu'))
         self.act_net.load_state_dict(model['model_state'])
-        # self.tgt_net.load_state_dict(model['model_state'])
+
