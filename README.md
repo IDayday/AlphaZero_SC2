@@ -191,6 +191,17 @@ epoch 3 batchloss: (2.1349072456359863, 0.8752843737602234, 1.2596228122711182)
 epoch 4 batchloss: (2.201287031173706, 0.9719098806381226, 1.2293771505355835) 
 ~~~
 
+## 6.14
+
+It is worth noting that compared with single-process training, multi-process training will exacerbate the instability in the training process. Batch size, learning rate, gradient clipping, optimal model estimation all need to be more careful.
+
+Here, a comparision between the training checkpoints of single and multi can express my point of view more clearly.
+
+<img src='eva_multi_vs_sample_result.jpg' width=800>
+
+The ordinate represents the checkpoints of the multi-training, and it is obvious that the updates of the 13th and 14th checkpoints are not stable.
+
+Compared with a single process, multi-process training accelerates the performance of the model significantly. It is necessary to solve large-scale problems.
 
 
 ## TODO
