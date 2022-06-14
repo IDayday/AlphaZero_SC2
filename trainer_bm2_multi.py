@@ -34,17 +34,17 @@ def simulation(rank, env, model_param, args, device, data_queue, signal_queue, s
         current_player = 1 # our first
         gameover = False
         obs = env.reset()
-        wait_update = False
-        while signal_queue.qsize() > 0:
-            time.sleep(0.02)
-            wait_update = True
-        if wait_update:
-            model.act_net.load_state_dict(model_param.state_dict())
         sim = time.time()
         while not gameover:
             # decay temperature parameter
             _t = (args.numIters - temp)/args.numIters
             t = _t if _t >= 0.015 else 0.015
+            wait_update = False
+            while signal_queue.qsize() > 0:
+                time.sleep(0.02)
+                wait_update = True
+            if wait_update:
+                agent.model.act_net.load_state_dict(model_param.state_dict())
             # simulating to get a root, and use it to take one step
             mcts = MCTS(env, obs, agent, args, 'cpu')
             root, root_action_probs, root_available_actions = mcts.run(current_player, max_search)
@@ -73,7 +73,8 @@ def simulation(rank, env, model_param, args, device, data_queue, signal_queue, s
             # so, if we check the value in a node, remember that it reflects your opponent's view
             value = env.get_value(obs, current_player) if gameover else None
             current_player *= -1
-            max_search = cal_steps(root_action_probs, action_probs, args.num_simulations)
+            # max_search = cal_steps(root_action_probs, action_probs, args.num_simulations)
+            # print("max_search: ", max_search)
 
             # until game is over, we get the value of the game
             if value is not None:
@@ -94,7 +95,7 @@ def simulation(rank, env, model_param, args, device, data_queue, signal_queue, s
                 temp += 1
 
 
-def learn(model_param, args, device, data_queue, signal_queue, simlog_queue):
+def learn(model_param, args, device, data_queue, signal_queue, simlog_queue, evalsignal_queue):
     # set for numpy and torch
     # os.environ['OPENBLAS_NUM_THREADS'] = '1'
     np.set_printoptions(precision=5)
@@ -119,15 +120,14 @@ def learn(model_param, args, device, data_queue, signal_queue, simlog_queue):
             info_log.append(f"simulation result : {obs_info} \n")
             del sim_log
 
-        if data_queue.qsize()%args.num_processes == 0:
-            signal_queue.put(1)
+        if data_queue.qsize() > args.num_processes:
             for n in range(args.num_processes):
                 ret = data_queue.get()
                 ret_clone = deepcopy(ret)
                 model.cache.extend(ret_clone)
                 del ret
                 del ret_clone
-
+            signal_queue.put(1)
             # if the data is enough, start training and update model
             if len(model.cache) > args.batch_size:
                 print('start training!')
@@ -142,6 +142,7 @@ def learn(model_param, args, device, data_queue, signal_queue, simlog_queue):
                     model.save(args.model_path, i)
                     print("model saved")
                     info_log.append("model saved \n")
+                    evalsignal_queue.put(1)
                 f = open(args.model_path + "log.txt", mode='a')
                 for info in info_log:
                     f.write(info)
@@ -161,75 +162,92 @@ def learn(model_param, args, device, data_queue, signal_queue, simlog_queue):
         f.write(info)
     f.close()
 
+def beat(env, agent1, agent2, flag):
+    obs = env.reset()
+    player = 1
+    gameover = False
+    prob_list = []
+    while not gameover:
+        if player == 1:
+            action_prob, _, _, available_actions = agent1.predict(obs, player)
+        elif player == -1:
+            action_prob, _, _, available_actions = agent2.predict(obs, player)
+        p = np.array(action_prob)
+        p /= p.sum()
+        if flag == 1:
+            if player == 1:
+                prob_list.append(p)
+        elif flag == 2:
+            if player == -1:
+                prob_list.append(p)
+        # if (player == 1 and flag == 1) or (player == -1 and flag == 2):
+        #     action = np.random.choice(available_actions, p=p)
+        # else:
+        #     max_prob = action_prob.argmax(-1)
+        #     action = available_actions[max_prob]
+        # use maxprob action
+        # max_prob = action_prob.argmax(-1)
+        # action = available_actions[max_prob]
+        # use sample
+        action = np.random.choice(available_actions, p=p)
+        obs, _ = env.step(obs, action, player)
+        gameover = env.check_gameover(obs)
+        player *= -1
+    value = env.get_value(obs, player)
+    # print(obs)
+    if value > 0:
+        return player, prob_list
+    elif value == 0:
+        return 0, prob_list
+    elif value < 0:
+        return -1*player, prob_list
 
-def evaluate(env, model_param, signal_queue, args):
+
+def evaluate(env, model_param, signal_queue, evalsignal_queue, args):
     time.sleep(500)
     while True:
-        model_list = os.listdir(args.model_path)
-        model_list.remove('log.txt')
-        if len(model_list) > 1:
-            print("Evaluating!")
-            my_model = Agent(args.n_state, args.hidden_size, args.n_action, 'cpu')
-            # my_model.act_net.load_state_dict(model_param.state_dict())
-            my_model.load(os.path.join(args.model_path,model_list[-1]))
-            my_agent = BMAgent_E(my_model, 'cpu', args)
-            op_model = Agent(args.n_state, args.hidden_size, args.n_action, 'cpu')
-            # beat with all of historial policies
-            for k in model_list[:-1]:
-                op_model.load(os.path.join(args.model_path, k))
-                op_agent = BMAgent_E(op_model, 'cpu', args)
-                obs = env.reset()
-                player = 1
-                gameover = False
-                my_win = 0
-                for t in range(100):
-                    if t <50:
-                        while not gameover:
-                            if player == 1:
-                                action_prob, _, _, available_actions = my_agent.predict(obs, player)
-                            elif player == -1:
-                                action_prob, _, _, available_actions = op_agent.predict(obs, player)
-                            p = np.array(action_prob)
-                            p /= p.sum()
-                            # max_prob = action_prob.argmax(-1)
-                            # action = available_actions[max_prob]
-                            action = np.random.choice(available_actions, p=p)
-                            obs, _ = env.step(obs, action, player)
-                            gameover = env.check_gameover(obs)
-                            player *= -1
-                        value = env.get_value(obs, player)
-                        if value > 0:
-                            if player == 1:
-                                my_win += 1
-                        elif value == 0:
-                            my_win += 0
-                        elif value < 0:
-                            if player == -1:
-                                my_win += 1
-                    else:
-                        while not gameover:
-                            if player == 1:
-                                action_prob, _, _, available_actions = op_agent.predict(obs, player)
-                            elif player == -1:
-                                action_prob, _, _, available_actions = my_agent.predict(obs, player)
-                            p = np.array(action_prob)
-                            p /= p.sum()
-                            # max_prob = action_prob.argmax(-1)
-                            # action = available_actions[max_prob]
-                            action = np.random.choice(available_actions, p=p)
-                            obs, _ = env.step(obs, action, player)
-                            gameover = env.check_gameover(obs)
-                            player *= -1
-                        value = env.get_value(obs, player)
-                        if value > 0:
-                            if player == -1:
-                                my_win += 1
-                        elif value == 0:
-                            my_win += 0
-                        elif value < 0:
-                            if player == 1:
-                                my_win += 1
-                my_win_rate = my_win/100
-                print(f"{model_list[-1]} vs {k} win rate is {my_win_rate}")
-        time.sleep(600)
+        flag = False
+        info_log = []
+        if evalsignal_queue.qsize() > 0:
+            time.sleep(0.1)
+            flag = True
+        while flag:
+            model_list = os.listdir(args.model_path)
+            try:
+                model_list.remove('log.txt')
+                model_list.remove('evallog.txt')
+            except:
+                pass
+            if len(model_list) > 1:
+                print("Evaluating!")
+                model_list.sort()
+                my_model = Agent(args.n_state, args.hidden_size, args.n_action, 'cpu')
+                # my_model.act_net.load_state_dict(model_param.state_dict())
+                my_model.load(os.path.join(args.model_path,model_list[-1]))
+                my_agent = BMAgent_E(my_model, 'cpu', args)
+                op_model = Agent(args.n_state, args.hidden_size, args.n_action, 'cpu')
+                # beat with all of historial policies
+                for k in model_list[:-1]:
+                    op_model.load(os.path.join(args.model_path, k))
+                    op_agent = BMAgent_E(op_model, 'cpu', args)
+                    my_win = 0
+                    for n in range(50):
+                        winner, _ = beat(env, my_agent, op_agent, 1)
+                        if winner == 1:
+                            my_win += 1
+                    # change player
+                    for l in range(50):
+                        winner, _ = beat(env, op_agent, my_agent, 2)
+                        if winner == -1:
+                            my_win += 1
+                    my_win_rate = my_win / 100
+                    print(f"{model_list[-1]} vs {k} win rate is {my_win_rate}")
+                    info_log.append(f"{model_list[-1]} vs {k} win rate is {my_win_rate} \n")
+            for s in range(evalsignal_queue.qsize()):
+                _ = evalsignal_queue.get()
+            f = open(args.model_path + "evallog.txt", mode='a')
+            for info in info_log:
+                f.write(info)
+            f.close()
+            flag = False
                 

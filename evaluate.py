@@ -1,6 +1,6 @@
 from bmgame import BMGame
-from bm_agent import DQNBMAgent, DQNBMAgent_E
-from bm_model import DQNAgent
+from dqn_agent import BMAgent, BMAgent_E
+from dqn_model import Agent
 import os 
 import random
 import numpy as np
@@ -31,16 +31,16 @@ def evaluate(agent1, agent2, flag):
         elif flag == 2:
             if player == -1:
                 prob_list.append(p)
-        if (player == 1 and flag == 1) or (player == -1 and flag == 2):
-            action = np.random.choice(available_actions, p=p)
-        else:
-            max_prob = action_prob.argmax(-1)
-            action = available_actions[max_prob]
+        # if (player == 1 and flag == 1) or (player == -1 and flag == 2):
+        #     action = np.random.choice(available_actions, p=p)
+        # else:
+        #     max_prob = action_prob.argmax(-1)
+        #     action = available_actions[max_prob]
         # use maxprob action
         # max_prob = action_prob.argmax(-1)
         # action = available_actions[max_prob]
         # use sample
-        # action = np.random.choice(available_actions, p=p)
+        action = np.random.choice(available_actions, p=p)
         obs, _ = env.step(obs, action, player)
         gameover = env.check_gameover(obs)
         player *= -1
@@ -62,19 +62,19 @@ def cal_entropy(prob):
     return res
 
 def childprocess(my_model_name, model_list):
-    my_model_path = './checkpoint/default_evaluate_sample/'
-    model_path = './checkpoint/default_evaluate_max/'   
-    my_model = DQNAgent(18, 256, 5, 'cpu')
+    my_model_path = '/root/remote/SC2/AlphaZero_SC2_Multi/checkpoint/default_evaluate_sample2/'
+    model_path = '/root/remote/SC2/AlphaZero_SC2_Multi/checkpoint/default_evaluate_sample2/'  
+    my_model = Agent(18, 256, 5, 'cpu')
     my_model.load(os.path.join(my_model_path, my_model_name))
     print('my model', my_model_name)
-    my_agent = DQNBMAgent_E(my_model, 'cpu')
-    op_model = DQNAgent(18, 256, 5, 'cpu')
+    my_agent = BMAgent_E(my_model, 'cpu')
+    op_model = Agent(18, 256, 5, 'cpu')
     win_log = {}
     entropy_list = []
     start_time = time.time()
     for m in model_list:
         op_model.load(os.path.join(model_path, m))
-        op_agent = DQNBMAgent_E(op_model, 'cpu')
+        op_agent = BMAgent_E(op_model, 'cpu')
         win_rate = 0
         win_times = 0
         # print("op model", m)
@@ -104,12 +104,22 @@ def childprocess(my_model_name, model_list):
 
 
 if __name__ == "__main__":
-    pool = multiprocessing.Pool(processes=46)
-    my_model_path = './checkpoint/default_evaluate_sample/'
-    model_path = './checkpoint/default_evaluate_max/'
+    pool = multiprocessing.Pool(processes=25)
+    my_model_path = '/root/remote/SC2/AlphaZero_SC2_Multi/checkpoint/default_evaluate_sample2/'
+    model_path = '/root/remote/SC2/AlphaZero_SC2_Multi/checkpoint/default_evaluate_sample2/'
     model_list = os.listdir(model_path)
+    try:
+        model_list.remove('log.txt')
+        model_list.remove('evallog.txt')
+    except:
+        pass
     model_list.sort()
     my_model_list = os.listdir(my_model_path)
+    try:
+        my_model_list.remove('log.txt')
+        my_model_list.remove('evallog.txt')
+    except:
+        pass
     my_model_list.sort()
     result = []
     entropy_log = []
@@ -120,7 +130,7 @@ if __name__ == "__main__":
     pool.join()
     end = time.time() - main_start_time
     print("main process time cost", end)
-    with open("./evaluatelog_sample_vs_max.txt", mode='a') as f:
+    with open("./evaluatelog_multisample2_vs_multisample2.txt", mode='a') as f:
         for res in result:
             win_log, cost_time, entropy = res.get()
             entropy_log.append(entropy)
@@ -135,6 +145,6 @@ if __name__ == "__main__":
         ax1.plot(entropy_data_smooth, color = 'blue', linewidth = 1.00)
         ax1.fill_between(x_axis, entropy_data_smooth-error_entropy_data_smooth, entropy_data_smooth+error_entropy_data_smooth, facecolor='blue', edgecolor='blue', alpha=0.15)
         plt.tick_params(labelsize=20)
-        plt.savefig('./entropy_sample_vs_max.jpg', dpi=200)
+        plt.savefig('./entropy_multisample2_vs_multisample2.jpg', dpi=200)
 
     

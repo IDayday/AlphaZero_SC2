@@ -38,7 +38,7 @@ parser.add_argument('--num_processes', type=int, default=10, help='number of mul
 parser.add_argument('--save-path', type=str, default='model.pt', help='model path for saving')
 parser.add_argument('--checkpoint_iter', type=int, default=10, help='checkpoint iterations')
 parser.add_argument('--checkpoint', type=str, default='', help='checkpoint for resuming training')
-parser.add_argument('--model_path', type=str, default='./checkpoint/default_evaluate_max2/', help='model path for evaluation')
+parser.add_argument('--model_path', type=str, default='./checkpoint/default_evaluate_sample2/', help='model path for evaluation')
 parser.add_argument('--test-epoch', type=int, default=3, help='number of test epochs')
 args = parser.parse_args()
 
@@ -66,11 +66,11 @@ if __name__ == '__main__':
     data_queue = mp.Queue(maxsize=100)   # FIFO 
     signal_queue = mp.Queue()
     simlog_queue = mp.Queue()
-    # trainlog_queue = mp.Queue()
+    evalsignal_queue = mp.Queue()
 
     start = time.time()
     processes = [] 
-    p = mp.Process(target=learn, args=(model_param, args, device, data_queue, signal_queue, simlog_queue))
+    p = mp.Process(target=learn, args=(model_param, args, device, data_queue, signal_queue, simlog_queue, evalsignal_queue))
     p.start()
     processes.append(p)
     for rank in range(1, args.num_processes + 1):
@@ -78,7 +78,7 @@ if __name__ == '__main__':
         p.start()
         processes.append(p)
 
-    p = mp.Process(target=evaluate, args=(env, model_param, signal_queue, args))
+    p = mp.Process(target=evaluate, args=(env, model_param, signal_queue, evalsignal_queue,args))
     p.start()
     processes.append(p)
 
